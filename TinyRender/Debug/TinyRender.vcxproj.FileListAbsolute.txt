@@ -1,2 +1,0 @@
-D:\Github\TinyRender\TinyRender\Debug\TinyRender.exe
-D:\Github\TinyRender\TinyRender\Debug\TinyRender.pdb

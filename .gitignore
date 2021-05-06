@@ -14,6 +14,7 @@
 *.la
 *.lo
 
+
 # Shared objects (inc. Windows DLLs)
 *.dll
 *.so
@@ -30,3 +31,8 @@
 
 # Debug files
 *.dSYM/
+
+
+# Folders
+# .vs
+# Debug
