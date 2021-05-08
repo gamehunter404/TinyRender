@@ -1,14 +1,20 @@
 #include<windows.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
 #include <tchar.h>
+#include<iostream>
+#include"Render.h"
+#include"Model.h"
+#include<vector>
+#include"Device.h"
 
 #ifdef _MSC_VER
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "user32.lib")
 #endif
+
+
 
 int screen_w, screen_h, screen_exit = 0;
 int screen_mx = 0, screen_my = 0, screen_mb = 0;
@@ -24,6 +30,9 @@ int screen_init(int w, int h, const TCHAR* title);	// 屏幕初始化
 int screen_close(void);								// 关闭屏幕
 void screen_dispatch(void);							// 处理消息
 void screen_update(void);							// 显示 FrameBuffer
+
+void device_init(Device*device);
+void device_destory(Device*device);
 
 // win32 event handler
 static LRESULT screen_events(HWND, UINT, WPARAM, LPARAM);
@@ -134,9 +143,48 @@ void screen_update(void) {
 
 void clearFrameBuf()
 {
-	memset(screen_fb,0xff,sizeof(int)*screen_w*screen_h);
+	memset(screen_fb,0,sizeof(int)*screen_w*screen_h);
 }
 
+
+void device_init(Device*device)
+{
+	if (device == nullptr) return;
+	
+	int need = (screen_w * screen_h * 4 + screen_h * 2)*sizeof(void*);
+	
+	char* ptr = new char[need];
+
+	device->frameBuf = (unsigned int**)(ptr);
+	device->zBuf = (float**)(ptr+screen_h*sizeof(void*));
+
+	ptr += sizeof(void*) * screen_h * 2;
+
+	for (int i = 0; i < screen_h; i++)
+	{
+		device->frameBuf[i] = (unsigned int*)(screen_fb+sizeof(unsigned int)*i*screen_w);
+		device->zBuf[i] = (float*)(ptr+sizeof(float)*screen_w*i);
+	}
+
+	device->width = screen_w;
+	device->height = screen_h;
+
+}
+
+void device_destory(Device* device)
+{
+	if (device == nullptr) return;
+
+	if (device->frameBuf != nullptr) {
+
+		delete[] device->frameBuf;
+	}
+
+	//zBuf 不需要delete ，否咋会造成重复delete
+
+	device->zBuf = nullptr;
+	device->frameBuf = nullptr;
+}
 
 
 int main()
@@ -144,15 +192,51 @@ int main()
 	TCHAR* title = _T("TinyRender - ")
 		_T("Left/Right: rotation, Up/Down: forward/backward, Space: switch state");
 
-	if (screen_init(800, 600, title))
+	if (screen_init(800, 800, title))
 		return -1;
-	clearFrameBuf();
+
+	Device device;
+	Render render;
+	Model model("african_head.obj");
+	Color red = Color(255,0,0,255);
+	Color green = Color(0,255,0,255);
+	Color blue = Color(0,0,255,255);
+	Color white = Color(255,255,255,255);
+
+	device_init(&device);
+
 	while (screen_exit == 0 && screen_keys[VK_ESCAPE] == 0) {
 		screen_dispatch();
+		clearFrameBuf();
 		
+		//render.WireframeRender();
+
+		for (int i = 0; i < model.nfaces(); i++)
+		{
+			std::vector<int>& face = model.face(i);
+
+			for (int k = 0; k < 3; k++)
+			{
+				auto v0 = model.vert(face[k]);
+				auto v1 = model.vert(face[(k + 1)%3]);
+
+				int x0 = (v0.x + 1.) * screen_w / 2;
+				int y0 = (1. - (v0.y + 1.) * 0.5)* screen_h;
+				int x1 = (v1.x + 1.) * screen_w / 2;
+				int y1 = (1. - (v1.y + 1.)*0.5)* screen_h;
+
+
+				render.DrawLine(x0,y0,x1,y1,white,device);
+			}
+
+		}
+
 		screen_update();
 		Sleep(1);
 	}
+
+	device_destory(&device);
+
 	return 0;
 
 }
