@@ -193,7 +193,7 @@ Color green = Color(0, 255, 0, 255);
 Color blue = Color(0, 0, 255, 255);
 Color white = Color(255, 255, 255, 255);
 
-void TestTriangleSymmetrical(Device&device,Render&render)
+void TestTriangleShape(Device&device,Render&render)
 {
 	
 	//一条水平直线
@@ -201,7 +201,7 @@ void TestTriangleSymmetrical(Device&device,Render&render)
 	Vec2Int v1 = { 400,100 };
 	Vec2Int v2 = { 600,100 };
 
-	//render.DrawTriangle(v0,v1,v2,red,device);
+	render.DrawTriangle(v0,v1,v2,red,device);
 
 
 	//一条垂直直线
@@ -209,7 +209,7 @@ void TestTriangleSymmetrical(Device&device,Render&render)
 	v1 = { 200,400 };
 	v2 = { 200,200 };
 
-	//render.DrawTriangle(v0, v1, v2, red, device);
+	render.DrawTriangle(v0, v1, v2, red, device);
 
 
 
@@ -218,7 +218,7 @@ void TestTriangleSymmetrical(Device&device,Render&render)
 	v1 = {400,400};
 	v2 = {400,400};
 
-	//render.DrawTriangle(v0, v1, v2, red, device);
+	render.DrawTriangle(v0, v1, v2, red, device);
 
 
 	//v0.y == v1.y
@@ -226,7 +226,7 @@ void TestTriangleSymmetrical(Device&device,Render&render)
 	v1 = { 400,100 };
 	v2 = { 600,200 };
 
-	//render.DrawTriangle(v0, v1, v2, red, device);
+	render.DrawTriangle(v0, v1, v2, red, device);
 
 
 	//v1.y == v2.y
@@ -234,7 +234,7 @@ void TestTriangleSymmetrical(Device&device,Render&render)
 	v1 = { 400,400 };
 	v2 = { 600,400 };
 
-	render.DrawTriangle(v0, v1, v2, red, device);
+	render.DrawTriangle(v0, v1, v2, green, device);
 
 
 	//普通三角形
@@ -290,18 +290,56 @@ void TestTriangleRotation(Device& device, Render& render)
 	angle += 0.5;
 }
 
+void drawHeadObj(Device&device,Model&model,Render&render)
+{
+	float halfScreen_w = screen_w / 2;
+
+	Vec3f light_dir = {0,0,-1};
+
+
+	for (int i = 0; i < model.nfaces(); i++)
+		{
+			std::vector<int>& face = model.face(i);
+
+			auto w0 = model.vert(face[0]);
+			auto w1 = model.vert(face[1]);
+			auto w2 = model.vert(face[2]);
+
+			Vec2Int v0, v1, v2;
+
+			v0.x = (w0.x + 1.) * halfScreen_w;
+			v0.y = (1. - (w0.y + 1.) * 0.5) * screen_h;
+			v1.x = (w1.x + 1.) * halfScreen_w;
+			v1.y = (1. - (w1.y + 1.) * 0.5) * screen_h;
+			v2.x = (w2.x + 1.) * halfScreen_w;
+			v2.y = (1. - (w2.y + 1.) * 0.5) * screen_h;
+
+			auto n = Vec3f_Cross(Vec3f_Sub(w2,w0),Vec3f_Sub(w1,w0));
+			n.Normalize();
+
+			float lightIntensity = Vec3f_Dot(n, light_dir);
+
+			//小于0时，三角形位于模型背面不需要进行绘制
+			if (lightIntensity > 0) {
+				unsigned char c = (unsigned char)(255 * lightIntensity);
+				render.DrawTriangle(v0, v1, v2, { c,c,c,c }, device);
+			}
+		}
+
+}
 
 int main()
 {
 	TCHAR* title = _T("TinyRender - ")
 		_T("Left/Right: rotation, Up/Down: forward/backward, Space: switch state");
 
-	if (screen_init(800, 600, title))
+	if (screen_init(800, 800, title))
 		return -1;
 
 	Device device;
 	Render render;
 	Model model("african_head.obj");
+
 	
 
 	device_init(&device);
@@ -312,28 +350,9 @@ int main()
 		
 		//render.WireframeRender();
 
-		/*for (int i = 0; i < model.nfaces(); i++)
-		{
-			std::vector<int>& face = model.face(i);
+		drawHeadObj(device,model,render);
 
-			for (int k = 0; k < 3; k++)
-			{
-				auto v0 = model.vert(face[k]);
-				auto v1 = model.vert(face[(k + 1)%3]);
-
-				int x0 = (v0.x + 1.) * screen_w / 2;
-				int y0 = (1. - (v0.y + 1.) * 0.5)* screen_h;
-				int x1 = (v1.x + 1.) * screen_w / 2;
-				int y1 = (1. - (v1.y + 1.)*0.5)* screen_h;
-
-
-				render.DrawLine(x0,y0,x1,y1,white,device);
-			}
-
-		}*/
-
-		TestTriangleRotation(device,render);
-
+		//TestTriangleRotation(device,render);
 
 		screen_update();
 		Sleep(1);
