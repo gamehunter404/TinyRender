@@ -6,6 +6,7 @@
 #include<iostream>
 #include"Render.h"
 #include"Model.h"
+#include"Maths.h"
 #include<vector>
 #include"Device.h"
 
@@ -162,7 +163,7 @@ void device_init(Device*device)
 
 	for (int i = 0; i < screen_h; i++)
 	{
-		device->frameBuf[i] = (unsigned int*)(screen_fb+sizeof(unsigned int)*i*screen_w);
+		device->frameBuf[i] = (unsigned int*)(screen_fb+4*i*screen_w);
 		device->zBuf[i] = (float*)(ptr+sizeof(float)*screen_w*i);
 	}
 
@@ -187,21 +188,121 @@ void device_destory(Device* device)
 }
 
 
+Color red = Color(255, 0, 0, 255);
+Color green = Color(0, 255, 0, 255);
+Color blue = Color(0, 0, 255, 255);
+Color white = Color(255, 255, 255, 255);
+
+void TestTriangleSymmetrical(Device&device,Render&render)
+{
+	
+	//一条水平直线
+	Vec2Int v0 = { 100,100 };
+	Vec2Int v1 = { 400,100 };
+	Vec2Int v2 = { 600,100 };
+
+	//render.DrawTriangle(v0,v1,v2,red,device);
+
+
+	//一条垂直直线
+	v0 = { 200,100 };
+	v1 = { 200,400 };
+	v2 = { 200,200 };
+
+	//render.DrawTriangle(v0, v1, v2, red, device);
+
+
+
+	//一个点
+	v0 = {400,400};
+	v1 = {400,400};
+	v2 = {400,400};
+
+	//render.DrawTriangle(v0, v1, v2, red, device);
+
+
+	//v0.y == v1.y
+	v0 = { 200,100 };
+	v1 = { 400,100 };
+	v2 = { 600,200 };
+
+	//render.DrawTriangle(v0, v1, v2, red, device);
+
+
+	//v1.y == v2.y
+	v0 = { 200,100 };
+	v1 = { 400,400 };
+	v2 = { 600,400 };
+
+	render.DrawTriangle(v0, v1, v2, red, device);
+
+
+	//普通三角形
+	v0 = { 200,100 };
+	v1 = { 400,400 };
+	v2 = { 600,200 };
+
+	render.DrawTriangle(v0, v1, v2, white, device);
+
+}
+void TestTriangleOrder(Device& device, Render& render)
+{
+	Vec2Int v0 = { 200,100 };
+	Vec2Int v1 = { 400,400 };
+	Vec2Int v2 = { 600,200 };
+
+
+	render.DrawTriangle(v0, v1, v2, white, device);
+	render.DrawTriangle(v0, v2, v2, red, device);
+	render.DrawTriangle(v1, v0, v2, blue, device);
+	render.DrawTriangle(v1, v2, v0, green, device);
+	render.DrawTriangle(v2, v0, v1, green, device);
+	render.DrawTriangle(v2, v1, v0, green, device);
+
+}
+void TestTriangleRotation(Device& device, Render& render)
+{
+
+	Vec2Int mid = { screen_w / 2,screen_h / 2 };
+	Vec2Int v0 = {-100,-100};
+	Vec2Int v1 = {100,-100};
+	Vec2Int v2 = {0,200};
+
+	static float angle = 0;
+
+	float radian = angle * (3.14f / 180);
+	float s = std::sin(radian), c = std::cos(radian);
+
+
+	int x0 = v0.x * c - s * v0.y;
+	int x1 = v1.x * c - s * v1.y;
+	int x2 = v2.x * c - s * v2.y;
+
+	int y0 = v0.x * s + c * v0.y;
+	int y1 = v1.x * s + c * v1.y;
+	int y2 = v2.x * s + c * v2.y;
+
+
+	render.DrawTriangle(Vec2i_Add(mid, Vec2Int{x0,y0}), Vec2i_Add(mid, Vec2Int{ x1,y1 })
+		, Vec2i_Add(mid, Vec2Int{ x2,y2 }), red, device);
+
+
+	angle += 0.5;
+}
+
+
 int main()
 {
 	TCHAR* title = _T("TinyRender - ")
 		_T("Left/Right: rotation, Up/Down: forward/backward, Space: switch state");
 
-	if (screen_init(800, 800, title))
+	if (screen_init(800, 600, title))
 		return -1;
 
 	Device device;
 	Render render;
 	Model model("african_head.obj");
-	Color red = Color(255,0,0,255);
-	Color green = Color(0,255,0,255);
-	Color blue = Color(0,0,255,255);
-	Color white = Color(255,255,255,255);
+	
 
 	device_init(&device);
 
@@ -211,7 +312,7 @@ int main()
 		
 		//render.WireframeRender();
 
-		for (int i = 0; i < model.nfaces(); i++)
+		/*for (int i = 0; i < model.nfaces(); i++)
 		{
 			std::vector<int>& face = model.face(i);
 
@@ -229,7 +330,10 @@ int main()
 				render.DrawLine(x0,y0,x1,y1,white,device);
 			}
 
-		}
+		}*/
+
+		TestTriangleRotation(device,render);
+
 
 		screen_update();
 		Sleep(1);
