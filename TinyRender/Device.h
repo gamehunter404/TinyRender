@@ -17,6 +17,8 @@ public:
 	TGAImage* texture;
 	int width;
 	int height;
+	float light_intensity;
+
 
 	TriangleFillAlgorithm triangleFillSetting = TriangleFillAlgorithm::TRIFILL_EDGEEQUATION;
 };

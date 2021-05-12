@@ -19,6 +19,11 @@ public:
 		_acolor = (0xff000000) | (r << 16) | (g << 8) | (b);
 	}
 
+	Color(unsigned char r_, unsigned char g_, unsigned char b_):r(r),g(g_),b(b_),a(255)
+	{
+
+	}
+
 	unsigned int RawData() const
 	{
 		return _color;
@@ -47,6 +52,7 @@ public:
 	void SetPixel(int x,int y,const Color&color,Device&device);
 	void DrawLine(int x0,int y0,int x1,int y1, const Color& color,Device&device);
 	void DrawTriangle(Vec3f* w, Vec2Int* v, Color&color,Device&device);
+	void DrawTriangle(Vec3f* w, Vec2Int* v, Vec3f* uvs, Device& device);
 
 private:
 
@@ -54,10 +60,13 @@ private:
 	/// 使用内外测试来进行三角形填充
 	/// </summary>
 	void drawTriByEdgeEquation(Vec3f* w, Vec2Int* v,const Color&color,Device&device);
+	void drawTriByEdgeEquation(Vec3f* w, Vec2Int* v,Vec3f*uvs, Device& device);
 	/// <summary>
 	/// 使用扫描线算法来进行三角形的绘制
 	/// </summary>
 	void drawTriBySweeping(Vec3f* w, Vec2Int* v,const Color&color,Device&device);
+
+	Vec3f interpolateUVCoord(Vec3f*uv,const Vec3f& vuw);
 
 private:
 

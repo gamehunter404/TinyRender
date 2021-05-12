@@ -364,13 +364,18 @@ void drawHeadObj(Device&device,Model&model,Render&render)
 
 	for (int i = 0; i < model.nfaces(); i++)
 		{
-			std::vector<int>& face = model.face(i);
+			std::vector<Vertex>& face = model.face(i);
 
 			Vec3f w[3];
+			Vec3f uvs[3];
 
-			w[0] = model.vert(face[0]);
-			w[1] = model.vert(face[1]);
-			w[2] = model.vert(face[2]);
+			w[0] = model.vert(face[0].verIndex);
+			w[1] = model.vert(face[1].verIndex);
+			w[2] = model.vert(face[2].verIndex);
+
+			uvs[0] = model.uvs(face[0].vtIndex);
+			uvs[1] = model.uvs(face[1].vtIndex);
+			uvs[2] = model.uvs(face[2].vtIndex);
 
 			Vec2Int v[3];
 
@@ -378,14 +383,15 @@ void drawHeadObj(Device&device,Model&model,Render&render)
 			v[1] = Vec2Int((w[1].x + 1.) * halfScreen_w,(1. - (w[1].y + 1.) * 0.5) * screen_h);
 			v[2] = Vec2Int((w[2].x + 1.) * halfScreen_w,(1. - (w[2].y + 1.) * 0.5) * screen_h);
 
+
 			auto n = Vec3f_Cross(Vec3f_Sub(w[2],w[1]),Vec3f_Sub(w[1],w[0]));
 			n.Normalize();
-			float lightIntensity = Vec3f_Dot(n, light_dir);
+			device.light_intensity = Vec3f_Dot(n, light_dir);
 
 			//小于0时，三角形位于模型背面不需要进行绘制
-			if (lightIntensity > 0) {
-				unsigned char c = (unsigned char)(255 * lightIntensity);
-				render.DrawTriangle(w,v, Color( c,c,c,c ), device);
+			if (device.light_intensity > 0) {
+				//unsigned char c = (unsigned char)(255 * lightIntensity);
+				render.DrawTriangle(w,v, uvs, device);
 			}
 		}
 
@@ -406,7 +412,7 @@ int main()
 
 	device_init(&device);
 
-	loadTexture("african_head_diffuse",device);
+	loadTexture("african_head_diffuse.tga",device);
 
 	while (screen_exit == 0 && screen_keys[VK_ESCAPE] == 0) {
 		screen_dispatch();
