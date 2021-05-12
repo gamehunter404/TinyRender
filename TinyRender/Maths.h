@@ -3,10 +3,20 @@
 
 
 typedef struct { float x, y; } Vec2f;
-typedef struct { int x, y;} Vec2Int;
 typedef struct { int x, y,z;} Vec3Int;
 typedef struct { float m[3][3]; } Mat3x3;
 typedef struct { float m[4][4]; } Mat4x4;
+
+
+struct Vec2Int
+{
+public:
+	Vec2Int(int x_, int y_) :x(x_), y(y_) {}
+	Vec2Int() :x(0), y(0) {}
+
+public:
+	int x, y;
+};
 
 
 struct Vec3f
@@ -24,6 +34,9 @@ public:
 };
 
 
+
+/*float relate function*/
+float Clamp(float v, float min, float max);
 
 
 

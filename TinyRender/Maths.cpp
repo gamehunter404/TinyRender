@@ -1,6 +1,13 @@
 #include "Maths.h"
 #include<iostream>
 
+float Clamp(float v, float min, float max)
+{
+	if (v < min) v = min;
+	else if (v > max) v = max;
+	return v;
+}
+
 Vec2f Vec2f_Add(const Vec2f& a,const Vec2f& b)
 {
 	return { a.x + b.x,a.y + b.y };

@@ -7,20 +7,36 @@ struct Color
 {
 
 public:
-	Color(unsigned int r, unsigned int g, unsigned int b, unsigned int a)
+	Color(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 	{
-		//小端字节序
 		_color = (a << 24) | (r<<16)|(g<<8)|(b);
-	}
-	
 
-	operator unsigned int() const
+		float div = (float)a / 255;
+		r *= div;
+		g *= div;
+		b *= div;
+
+		_acolor = (0xff000000) | (r << 16) | (g << 8) | (b);
+	}
+
+	unsigned int RawData() const
 	{
 		return _color;
 	}
 
-private:
-	unsigned int _color;
+	unsigned int Data() const
+	{
+		return _acolor;
+	}
+
+
+public:
+	union {
+		unsigned int _color;
+		unsigned char a, r, g, b;
+	};
+
+	unsigned int _acolor;
 };
 
 class Render
@@ -30,18 +46,18 @@ public:
 	void WireframeRender(const Device&device);
 	void SetPixel(int x,int y,const Color&color,Device&device);
 	void DrawLine(int x0,int y0,int x1,int y1, const Color& color,Device&device);
-	void DrawTriangle(Vec2Int v0, Vec2Int v1, Vec2Int v2,const Color&color,Device&device);
+	void DrawTriangle(Vec3f* w, Vec2Int* v, Color&color,Device&device);
 
 private:
 
 	/// <summary>
 	/// 使用内外测试来进行三角形填充
 	/// </summary>
-	void drawTriByEdgeEquation(Vec2Int v0,Vec2Int v1,Vec2Int v2,const Color&color,Device&device);
+	void drawTriByEdgeEquation(Vec3f* w, Vec2Int* v,const Color&color,Device&device);
 	/// <summary>
 	/// 使用扫描线算法来进行三角形的绘制
 	/// </summary>
-	void drawTriBySweeping(Vec2Int v0,Vec2Int v1,Vec2Int v2,const Color&color,Device&device);
+	void drawTriBySweeping(Vec3f* w, Vec2Int* v,const Color&color,Device&device);
 
 private:
 

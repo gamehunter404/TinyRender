@@ -16,7 +16,7 @@ void Render::SetPixel(int x, int y, const Color& color, Device& device)
 	if (y<0 || y>=device.height) return;
 
 	// i = y,j = x
-	device.frameBuf[y][x] = color;
+	device.frameBuf[y][x] = color.Data();
 }
 
 void Render::DrawLine(int x0, int y0, int x1, int y1,const Color& color,Device&device)
@@ -61,26 +61,38 @@ void Render::DrawLine(int x0, int y0, int x1, int y1,const Color& color,Device&d
 	}
 }
 
-void Render::DrawTriangle(Vec2Int v0, Vec2Int v1, Vec2Int v2, const Color& color, Device& device)
+void Render::DrawTriangle(Vec3f*w, Vec2Int*v, Color& color, Device& device)
 {
+
 	switch (device.triangleFillSetting)
 	{
-	case TriangleFillSetting::TRIFILL_SWEEPING:
-		drawTriBySweeping(v0,v1,v2,color,device);
+	case TriangleFillAlgorithm::TRIFILL_SWEEPING:
+		drawTriBySweeping(w,v,color,device);
 		break;
 
-	case TriangleFillSetting::TRIFILL_EDGEEQUATION:
-		drawTriByEdgeEquation(v0,v1,v2,color,device);
+	case TriangleFillAlgorithm::TRIFILL_EDGEEQUATION:
+		drawTriByEdgeEquation(w,v,color,device);
 		break;
 	}
+
 }
 
-void Render::drawTriByEdgeEquation(Vec2Int v0, Vec2Int v1, Vec2Int v2, const Color& color, Device& device)
+
+
+void Render::drawTriByEdgeEquation(Vec3f* w, Vec2Int* v, const Color& color, Device& device)
 {
+
+	Vec2Int& v0 = v[0];
+	Vec2Int& v1 = v[1];
+	Vec2Int& v2 = v[2];
+
 	int minX = std::min(std::min(v0.x,v1.x),v2.x), maxX = std::max(std::max(v0.x, v1.x), v2.x);
 	int minY = std::min(std::min(v0.y, v1.y), v2.y), maxY = std::max(std::max(v0.y,v1.y),v2.y);
-
 	
+	minX = std::max(0,minX);
+	maxX = std::min(device.width-1,maxX);
+	minY = std::max(0,minY);
+	maxY = std::min(device.height-1,maxY);
 
 	if (v0.y == v1.y && v2.y == v1.y) {
 
@@ -93,6 +105,8 @@ void Render::drawTriByEdgeEquation(Vec2Int v0, Vec2Int v1, Vec2Int v2, const Col
 		return;
 	}
 
+	float z = 0;
+
 	for (int y = minY; y <= maxY; y++)
 	{
 		for (int x = minX; x <= maxX; x++)
@@ -103,13 +117,24 @@ void Render::drawTriByEdgeEquation(Vec2Int v0, Vec2Int v1, Vec2Int v2, const Col
 			if (u.x < 0 || u.y < 0 || u.z < 0) 
 				continue;
 
-			SetPixel(x, y, color, device);
+			z = w[0].z * u.x+w[1].z*u.y+w[2].z*u.z;
+
+			if (z > device.zBuf[y][x])
+			{
+				device.zBuf[y][x] = z;
+				SetPixel(x, y, color, device);
+			}
+
 		}
 	}
 }
 
-void Render::drawTriBySweeping(Vec2Int v0, Vec2Int v1, Vec2Int v2, const Color& color, Device& device)
+void Render::drawTriBySweeping(Vec3f* w, Vec2Int* v, const Color& color, Device& device)
 {
+	Vec2Int& v0 = v[0];
+	Vec2Int& v1 = v[1];
+	Vec2Int& v2 = v[2];
+
 	if (v0.y > v1.y) std::swap(v0, v1);
 	if (v0.y > v2.y) std::swap(v0, v2);
 	if (v1.y > v2.y) std::swap(v1, v2);

@@ -9,6 +9,7 @@
 #include"Maths.h"
 #include<vector>
 #include"Device.h"
+#include"tgaImage.h"
 
 #ifdef _MSC_VER
 #pragma comment(lib, "gdi32.lib")
@@ -27,11 +28,17 @@ static HBITMAP screen_ob = NULL;		// 老的 BITMAP
 unsigned char* screen_fb = NULL;		// frame buffer
 long screen_pitch = 0;
 
+
+Color red = Color(255, 0, 0, 255);
+Color green = Color(0, 255, 0, 255);
+Color blue = Color(0, 0, 255, 255);
+Color white = Color(255, 255, 255, 255);
+Color black = Color(0,0,0,0);
+
 int screen_init(int w, int h, const TCHAR* title);	// 屏幕初始化
 int screen_close(void);								// 关闭屏幕
 void screen_dispatch(void);							// 处理消息
 void screen_update(void);							// 显示 FrameBuffer
-
 void device_init(Device*device);
 void device_destory(Device*device);
 
@@ -93,7 +100,6 @@ int screen_init(int w, int h, const TCHAR* title) {
 
 	return 0;
 }
-
 int screen_close(void) {
 	if (screen_dc) {
 		if (screen_ob) {
@@ -133,7 +139,6 @@ void screen_dispatch(void) {
 		DispatchMessage(&msg);
 	}
 }
-
 void screen_update(void) {
 	HDC hDC = GetDC(screen_handle);
 	BitBlt(hDC, 0, 0, screen_w, screen_h, screen_dc, 0, 0, SRCCOPY);
@@ -142,9 +147,23 @@ void screen_update(void) {
 }
 
 
-void clearFrameBuf()
+
+void clearFrameBuf(Device&device)
 {
-	memset(screen_fb,0,sizeof(int)*screen_w*screen_h);
+	unsigned int* fb = (unsigned int*)screen_fb;
+	int nums = screen_w * screen_h;
+
+	for (int i = 0; i < nums; i++)
+		fb[i] = black.Data();
+}
+void clearZBuffer(Device&device)
+{
+	float* zbuf = device.zBuf[0];
+	int nums = screen_w * screen_h;
+
+	for (int i = 0; i < nums; i++)
+		zbuf[i] = -FLT_MAX;
+
 }
 
 
@@ -171,7 +190,6 @@ void device_init(Device*device)
 	device->height = screen_h;
 
 }
-
 void device_destory(Device* device)
 {
 	if (device == nullptr) return;
@@ -183,112 +201,159 @@ void device_destory(Device* device)
 
 	//zBuf 不需要delete ，否咋会造成重复delete
 
+	if (device->texture != nullptr)
+	{
+		delete device->texture;
+		device->texture = nullptr;
+	}
+
 	device->zBuf = nullptr;
 	device->frameBuf = nullptr;
 }
 
-
-Color red = Color(255, 0, 0, 255);
-Color green = Color(0, 255, 0, 255);
-Color blue = Color(0, 0, 255, 255);
-Color white = Color(255, 255, 255, 255);
-
-void TestTriangleShape(Device&device,Render&render)
+void renderToFile(char* filePath,Device&device)
 {
-	
-	//一条水平直线
-	Vec2Int v0 = { 100,100 };
-	Vec2Int v1 = { 400,100 };
-	Vec2Int v2 = { 600,100 };
+	TGAImage image(device.width, device.height, 4);
 
-	render.DrawTriangle(v0,v1,v2,red,device);
+	for (int x = 0; x < device.width; x++)
+	{
+		for (int y = 0; y < device.height; y++)
+		{
+			unsigned int color = device.frameBuf[y][x];//0xffffffff;
+			unsigned char r, g, b, a;
+			a = (0xff000000 & color)>>24;
+			r = (0x00ff0000 & color)>>16;
+			g = (0x0000ff00 & color)>>8;
+			b = 0x000000ff & color;
+			image.set(x, y, TGAColor(r, g, b, a));
+		}
+	}
 
-
-	//一条垂直直线
-	v0 = { 200,100 };
-	v1 = { 200,400 };
-	v2 = { 200,200 };
-
-	render.DrawTriangle(v0, v1, v2, red, device);
-
-
-
-	//一个点
-	v0 = {400,400};
-	v1 = {400,400};
-	v2 = {400,400};
-
-	render.DrawTriangle(v0, v1, v2, red, device);
-
-
-	//v0.y == v1.y
-	v0 = { 200,100 };
-	v1 = { 400,100 };
-	v2 = { 600,200 };
-
-	render.DrawTriangle(v0, v1, v2, red, device);
-
-
-	//v1.y == v2.y
-	v0 = { 200,100 };
-	v1 = { 400,400 };
-	v2 = { 600,400 };
-
-	render.DrawTriangle(v0, v1, v2, green, device);
-
-
-	//普通三角形
-	v0 = { 200,100 };
-	v1 = { 400,400 };
-	v2 = { 600,200 };
-
-	render.DrawTriangle(v0, v1, v2, white, device);
+	image.write_tga_file(filePath);
 
 }
-void TestTriangleOrder(Device& device, Render& render)
+void renderDepthBuffer(Device&device)
 {
-	Vec2Int v0 = { 200,100 };
-	Vec2Int v1 = { 400,400 };
-	Vec2Int v2 = { 600,200 };
+	float* depthBuf = device.zBuf[0];
+	unsigned int* frameBuf = device.frameBuf[0];
+	int nums = device.width * device.height;
 
+	Color color = black;
 
-	render.DrawTriangle(v0, v1, v2, white, device);
-	render.DrawTriangle(v0, v2, v2, red, device);
-	render.DrawTriangle(v1, v0, v2, blue, device);
-	render.DrawTriangle(v1, v2, v0, green, device);
-	render.DrawTriangle(v2, v0, v1, green, device);
-	render.DrawTriangle(v2, v1, v0, green, device);
+	for (int i = 0; i < nums; i++)
+	{
+		if (std::abs(depthBuf[i]) <1.0f)
+		{
+
+			Color color = Color(255, 255, 255, 255*std::abs(depthBuf[i]));
+			frameBuf[i] = color.Data();
+		}
+	}
 
 }
-void TestTriangleRotation(Device& device, Render& render)
+void loadTexture(char*filePath,Device& device)
 {
-
-	Vec2Int mid = { screen_w / 2,screen_h / 2 };
-	Vec2Int v0 = {-100,-100};
-	Vec2Int v1 = {100,-100};
-	Vec2Int v2 = {0,200};
-
-	static float angle = 0;
-
-	float radian = angle * (3.14f / 180);
-	float s = std::sin(radian), c = std::cos(radian);
-
-
-	int x0 = v0.x * c - s * v0.y;
-	int x1 = v1.x * c - s * v1.y;
-	int x2 = v2.x * c - s * v2.y;
-
-	int y0 = v0.x * s + c * v0.y;
-	int y1 = v1.x * s + c * v1.y;
-	int y2 = v2.x * s + c * v2.y;
-
-
-	render.DrawTriangle(Vec2i_Add(mid, Vec2Int{x0,y0}), Vec2i_Add(mid, Vec2Int{ x1,y1 })
-		, Vec2i_Add(mid, Vec2Int{ x2,y2 }), red, device);
-
-
-	angle += 0.5;
+	TGAImage* texture = new TGAImage();
+	texture->read_tga_file(filePath);
+	device.texture = texture;
 }
+
+//void TestTriangleShape(Device&device,Render&render)
+//{
+//	
+//	//一条水平直线
+//	Vec2Int v0 = { 100,100 };
+//	Vec2Int v1 = { 400,100 };
+//	Vec2Int v2 = { 600,100 };
+//
+//	render.DrawTriangle(v0,v1,v2,red,device);
+//
+//
+//	//一条垂直直线
+//	v0 = { 200,100 };
+//	v1 = { 200,400 };
+//	v2 = { 200,200 };
+//
+//	render.DrawTriangle(v0, v1, v2, red, device);
+//
+//
+//
+//	//一个点
+//	v0 = {400,400};
+//	v1 = {400,400};
+//	v2 = {400,400};
+//
+//	render.DrawTriangle(v0, v1, v2, red, device);
+//
+//
+//	//v0.y == v1.y
+//	v0 = { 200,100 };
+//	v1 = { 400,100 };
+//	v2 = { 600,200 };
+//
+//	render.DrawTriangle(v0, v1, v2, red, device);
+//
+//
+//	//v1.y == v2.y
+//	v0 = { 200,100 };
+//	v1 = { 400,400 };
+//	v2 = { 600,400 };
+//
+//	render.DrawTriangle(v0, v1, v2, green, device);
+//
+//
+//	//普通三角形
+//	v0 = { 200,100 };
+//	v1 = { 400,400 };
+//	v2 = { 600,200 };
+//
+//	render.DrawTriangle(v0, v1, v2, white, device);
+//
+//}
+//void TestTriangleOrder(Device& device, Render& render)
+//{
+//	Vec2Int v0 = { 200,100 };
+//	Vec2Int v1 = { 400,400 };
+//	Vec2Int v2 = { 600,200 };
+//
+//
+//	render.DrawTriangle(v0, v1, v2, white, device);
+//	render.DrawTriangle(v0, v2, v2, red, device);
+//	render.DrawTriangle(v1, v0, v2, blue, device);
+//	render.DrawTriangle(v1, v2, v0, green, device);
+//	render.DrawTriangle(v2, v0, v1, green, device);
+//	render.DrawTriangle(v2, v1, v0, green, device);
+//
+//}
+//void TestTriangleRotation(Device& device, Render& render)
+//{
+//
+//	Vec2Int mid = { screen_w / 2,screen_h / 2 };
+//	Vec2Int v0 = {-100,-100};
+//	Vec2Int v1 = {100,-100};
+//	Vec2Int v2 = {0,200};
+//
+//	static float angle = 0;
+//
+//	float radian = angle * (3.14f / 180);
+//	float s = std::sin(radian), c = std::cos(radian);
+//
+//
+//	int x0 = v0.x * c - s * v0.y;
+//	int x1 = v1.x * c - s * v1.y;
+//	int x2 = v2.x * c - s * v2.y;
+//
+//	int y0 = v0.x * s + c * v0.y;
+//	int y1 = v1.x * s + c * v1.y;
+//	int y2 = v2.x * s + c * v2.y;
+//
+//
+//	render.DrawTriangle(Vec2i_Add(mid, Vec2Int{x0,y0}), Vec2i_Add(mid, Vec2Int{ x1,y1 })
+//		, Vec2i_Add(mid, Vec2Int{ x2,y2 }), red, device);
+//
+//
+//	angle += 0.5;
+//}
 
 void drawHeadObj(Device&device,Model&model,Render&render)
 {
@@ -301,31 +366,30 @@ void drawHeadObj(Device&device,Model&model,Render&render)
 		{
 			std::vector<int>& face = model.face(i);
 
-			auto w0 = model.vert(face[0]);
-			auto w1 = model.vert(face[1]);
-			auto w2 = model.vert(face[2]);
+			Vec3f w[3];
 
-			Vec2Int v0, v1, v2;
+			w[0] = model.vert(face[0]);
+			w[1] = model.vert(face[1]);
+			w[2] = model.vert(face[2]);
 
-			v0.x = (w0.x + 1.) * halfScreen_w;
-			v0.y = (1. - (w0.y + 1.) * 0.5) * screen_h;
-			v1.x = (w1.x + 1.) * halfScreen_w;
-			v1.y = (1. - (w1.y + 1.) * 0.5) * screen_h;
-			v2.x = (w2.x + 1.) * halfScreen_w;
-			v2.y = (1. - (w2.y + 1.) * 0.5) * screen_h;
+			Vec2Int v[3];
 
-			auto n = Vec3f_Cross(Vec3f_Sub(w2,w0),Vec3f_Sub(w1,w0));
+			v[0] = Vec2Int((w[0].x + 1.) * halfScreen_w,(1. - (w[0].y + 1.) * 0.5) * screen_h );
+			v[1] = Vec2Int((w[1].x + 1.) * halfScreen_w,(1. - (w[1].y + 1.) * 0.5) * screen_h);
+			v[2] = Vec2Int((w[2].x + 1.) * halfScreen_w,(1. - (w[2].y + 1.) * 0.5) * screen_h);
+
+			auto n = Vec3f_Cross(Vec3f_Sub(w[2],w[1]),Vec3f_Sub(w[1],w[0]));
 			n.Normalize();
-
 			float lightIntensity = Vec3f_Dot(n, light_dir);
 
 			//小于0时，三角形位于模型背面不需要进行绘制
 			if (lightIntensity > 0) {
 				unsigned char c = (unsigned char)(255 * lightIntensity);
-				render.DrawTriangle(v0, v1, v2, { c,c,c,c }, device);
+				render.DrawTriangle(w,v, Color( c,c,c,c ), device);
 			}
 		}
 
+	
 }
 
 int main()
@@ -340,23 +404,22 @@ int main()
 	Render render;
 	Model model("african_head.obj");
 
-	
-
 	device_init(&device);
+
+	loadTexture("african_head_diffuse",device);
 
 	while (screen_exit == 0 && screen_keys[VK_ESCAPE] == 0) {
 		screen_dispatch();
-		clearFrameBuf();
 		
-		//render.WireframeRender();
+		clearZBuffer(device);
+		clearFrameBuf(device);
 
-		drawHeadObj(device,model,render);
-
-		//TestTriangleRotation(device,render);
+		drawHeadObj(device, model, render);
 
 		screen_update();
 		Sleep(1);
 	}
+
 
 	device_destory(&device);
 
