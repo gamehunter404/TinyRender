@@ -10,6 +10,7 @@
 #include<vector>
 #include"Device.h"
 #include"tgaImage.h"
+#include"Camera.h"
 
 #ifdef _MSC_VER
 #pragma comment(lib, "gdi32.lib")
@@ -28,7 +29,7 @@ static HBITMAP screen_ob = NULL;		// 老的 BITMAP
 unsigned char* screen_fb = NULL;		// frame buffer
 long screen_pitch = 0;
 
-
+TGAImage* defaultTexture;//默认贴图
 Color red = Color(255, 0, 0, 255);
 Color green = Color(0, 255, 0, 255);
 Color blue = Color(0, 0, 255, 255);
@@ -188,6 +189,22 @@ void device_init(Device*device)
 
 	device->width = screen_w;
 	device->height = screen_h;
+	device->screenRatio = screen_w / (float)screen_h;
+	device->t = std::tan(angleToRadians(device->fov*0.5f))*device->nearPlane;
+	device->b = -device->t;
+	device->r = device->screenRatio * device->t;
+	device->l = -device->r;
+
+	defaultTexture = new TGAImage(screen_w, screen_h, 4);
+	TGAColor color(255,0,0,255);
+
+	for (int x = 0; x < screen_w; x++)
+	{
+		for (int y = 0; y < screen_h; y++)
+		{
+			defaultTexture->set(x, y, color);
+		}
+	}
 
 }
 void device_destory(Device* device)
@@ -201,17 +218,13 @@ void device_destory(Device* device)
 
 	//zBuf 不需要delete ，否咋会造成重复delete
 
-	if (device->texture != nullptr)
-	{
-		delete device->texture;
-		device->texture = nullptr;
-	}
-
 	device->zBuf = nullptr;
 	device->frameBuf = nullptr;
+	delete defaultTexture;
+
 }
 
-void renderToFile(char* filePath,Device&device)
+void renderToFile(const char* filePath,Device&device)
 {
 	TGAImage image(device.width, device.height, 4);
 
@@ -251,168 +264,57 @@ void renderDepthBuffer(Device&device)
 	}
 
 }
-void loadTexture(char*filePath,Device& device)
+
+void loadModel(const char* filePath, Model* model)
 {
-	TGAImage* texture = new TGAImage();
-	texture->read_tga_file(filePath);
-	device.texture = texture;
+	if (model == nullptr) return;
+
+	model->readObjFile(filePath);
+}
+void loadTexture(const char* filename, Model* model)
+{
+	if (!model->loadTextureFromTGA(filename))
+	{
+		model->setTexture(*defaultTexture);
+	}
+}
+void initCamera(Camera* camera)
+{
+	if (camera == nullptr) return;
+
+	camera->setPos({0,0,3});
+	camera->setTarget({0,0,0});
+	camera->setUp({ 0,1,0 });
 }
 
-//void TestTriangleShape(Device&device,Render&render)
-//{
-//	
-//	//一条水平直线
-//	Vec2Int v0 = { 100,100 };
-//	Vec2Int v1 = { 400,100 };
-//	Vec2Int v2 = { 600,100 };
-//
-//	render.DrawTriangle(v0,v1,v2,red,device);
-//
-//
-//	//一条垂直直线
-//	v0 = { 200,100 };
-//	v1 = { 200,400 };
-//	v2 = { 200,200 };
-//
-//	render.DrawTriangle(v0, v1, v2, red, device);
-//
-//
-//
-//	//一个点
-//	v0 = {400,400};
-//	v1 = {400,400};
-//	v2 = {400,400};
-//
-//	render.DrawTriangle(v0, v1, v2, red, device);
-//
-//
-//	//v0.y == v1.y
-//	v0 = { 200,100 };
-//	v1 = { 400,100 };
-//	v2 = { 600,200 };
-//
-//	render.DrawTriangle(v0, v1, v2, red, device);
-//
-//
-//	//v1.y == v2.y
-//	v0 = { 200,100 };
-//	v1 = { 400,400 };
-//	v2 = { 600,400 };
-//
-//	render.DrawTriangle(v0, v1, v2, green, device);
-//
-//
-//	//普通三角形
-//	v0 = { 200,100 };
-//	v1 = { 400,400 };
-//	v2 = { 600,200 };
-//
-//	render.DrawTriangle(v0, v1, v2, white, device);
-//
-//}
-//void TestTriangleOrder(Device& device, Render& render)
-//{
-//	Vec2Int v0 = { 200,100 };
-//	Vec2Int v1 = { 400,400 };
-//	Vec2Int v2 = { 600,200 };
-//
-//
-//	render.DrawTriangle(v0, v1, v2, white, device);
-//	render.DrawTriangle(v0, v2, v2, red, device);
-//	render.DrawTriangle(v1, v0, v2, blue, device);
-//	render.DrawTriangle(v1, v2, v0, green, device);
-//	render.DrawTriangle(v2, v0, v1, green, device);
-//	render.DrawTriangle(v2, v1, v0, green, device);
-//
-//}
-//void TestTriangleRotation(Device& device, Render& render)
-//{
-//
-//	Vec2Int mid = { screen_w / 2,screen_h / 2 };
-//	Vec2Int v0 = {-100,-100};
-//	Vec2Int v1 = {100,-100};
-//	Vec2Int v2 = {0,200};
-//
-//	static float angle = 0;
-//
-//	float radian = angle * (3.14f / 180);
-//	float s = std::sin(radian), c = std::cos(radian);
-//
-//
-//	int x0 = v0.x * c - s * v0.y;
-//	int x1 = v1.x * c - s * v1.y;
-//	int x2 = v2.x * c - s * v2.y;
-//
-//	int y0 = v0.x * s + c * v0.y;
-//	int y1 = v1.x * s + c * v1.y;
-//	int y2 = v2.x * s + c * v2.y;
-//
-//
-//	render.DrawTriangle(Vec2i_Add(mid, Vec2Int{x0,y0}), Vec2i_Add(mid, Vec2Int{ x1,y1 })
-//		, Vec2i_Add(mid, Vec2Int{ x2,y2 }), red, device);
-//
-//
-//	angle += 0.5;
-//}
-
-void drawHeadObj(Device&device,Model&model,Render&render)
-{
-	float halfScreen_w = screen_w / 2;
-
-	Vec3f light_dir = {0,0,-1};
-
-
-	for (int i = 0; i < model.nfaces(); i++)
-		{
-			std::vector<Vertex>& face = model.face(i);
-
-			Vec3f w[3];
-			Vec3f uvs[3];
-
-			w[0] = model.vert(face[0].verIndex);
-			w[1] = model.vert(face[1].verIndex);
-			w[2] = model.vert(face[2].verIndex);
-
-			uvs[0] = model.uvs(face[0].vtIndex);
-			uvs[1] = model.uvs(face[1].vtIndex);
-			uvs[2] = model.uvs(face[2].vtIndex);
-
-			Vec2Int v[3];
-
-			v[0] = Vec2Int((w[0].x + 1.) * halfScreen_w,(1. - (w[0].y + 1.) * 0.5) * screen_h );
-			v[1] = Vec2Int((w[1].x + 1.) * halfScreen_w,(1. - (w[1].y + 1.) * 0.5) * screen_h);
-			v[2] = Vec2Int((w[2].x + 1.) * halfScreen_w,(1. - (w[2].y + 1.) * 0.5) * screen_h);
-
-
-			auto n = Vec3f_Cross(Vec3f_Sub(w[2],w[1]),Vec3f_Sub(w[1],w[0]));
-			n.Normalize();
-			device.light_intensity = Vec3f_Dot(n, light_dir);
-
-			//小于0时，三角形位于模型背面不需要进行绘制
-			if (device.light_intensity > 0) {
-				//unsigned char c = (unsigned char)(255 * lightIntensity);
-				render.DrawTriangle(w,v, uvs, device);
-			}
-		}
-
-	
-}
 
 int main()
 {
 	TCHAR* title = _T("TinyRender - ")
 		_T("Left/Right: rotation, Up/Down: forward/backward, Space: switch state");
 
-	if (screen_init(800, 800, title))
+	if (screen_init(800, 600, title))
 		return -1;
+
+	const char* africanHead = "african_head.obj";
+	const char* triangleObj = "triangle.obj";
+	const char* africanHeadTexture = "african_head_diffuse.tga";
+
 
 	Device device;
 	Render render;
-	Model model("african_head.obj");
+	float angle = 4;
+	std::vector<Model> models(2);
+	Camera camera;
+
+	loadModel(africanHead,&(models[0]));
+	loadTexture(africanHeadTexture,&(models[0]));
 
 	device_init(&device);
+	initCamera(&camera);
 
-	loadTexture("african_head_diffuse.tga",device);
+
+	Vec4f pos = vec4f_SetPoint(camera.getPos());
 
 	while (screen_exit == 0 && screen_keys[VK_ESCAPE] == 0) {
 		screen_dispatch();
@@ -420,12 +322,18 @@ int main()
 		clearZBuffer(device);
 		clearFrameBuf(device);
 
-		drawHeadObj(device, model, render);
+		render.renderModel(camera, models,device);
+		//Model& model = models[0];
+		//model.rotation(0,angle,0);
+		//std::cout << angle << std::endl;
+		//pos = vec4f_Mul(getRotationYMat(angleToRadians(angle)),pos);
+		//camera.setPos(pos);
+
+		angle += 3;
 
 		screen_update();
 		Sleep(1);
 	}
-
 
 	device_destory(&device);
 

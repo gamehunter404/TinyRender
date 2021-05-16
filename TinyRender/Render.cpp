@@ -1,5 +1,8 @@
 #include"Render.h"
 #include"Device.h"
+#include"Model.h"
+#include"Maths.h"
+#include"Camera.h"
 #include<iostream>
 
 
@@ -79,7 +82,6 @@ void Render::DrawTriangle(Vec3f*w, Vec2Int*v, Color& color, Device& device)
 
 void Render::DrawTriangle(Vec3f* w, Vec2Int* v, Vec3f* uvs, Device& device)
 {
-	if (device.texture == nullptr) return;
 
 	switch (device.triangleFillSetting)
 	{
@@ -93,7 +95,59 @@ void Render::DrawTriangle(Vec3f* w, Vec2Int* v, Vec3f* uvs, Device& device)
 
 }
 
+void Render::renderModel(const Camera& camera,std::vector<Model>& models, Device& device)
+{
+	Mat4x4 viewMat = getViewMat(camera.getPos(),camera.getTarget(),camera.getUp()); //视角矩阵
+	Mat4x4 projectMat = getProjectionMat(device); //投影矩阵
+	Mat4x4 pvMat = mat4x4_Mul(projectMat, viewMat);
 
+	Vec4f w[3];//世界坐标
+	Vec3f uvs[3];//顶点uv
+	Vec3f vns[3];//顶点法线
+	Vec4f v[3];
+
+	//device.light_Dir = camera.lookDir();
+
+	for (int n = 0; n < models.size(); n++)
+	{
+		Model& model = models[n];
+		Mat4x4 modelMat = getModelMat(model.getScale(),model.getRotation(),model.getTranslate());
+
+		for (int i = 0; i < model.nfaces(); i++)
+		{
+			auto& face = model.face(i);
+			w[0] = vec4f_SetPoint(model.vert(face[0].verIndex));
+			w[1] = vec4f_SetPoint(model.vert(face[1].verIndex));
+			w[2] = vec4f_SetPoint(model.vert(face[2].verIndex));
+
+			uvs[0] = model.uvs(face[0].vtIndex);
+			uvs[1] = model.uvs(face[1].vtIndex);
+			uvs[2] = model.uvs(face[2].vtIndex);
+
+			w[0] = vec4f_Mul(modelMat, w[0]);
+			w[1] = vec4f_Mul(modelMat, w[1]);
+			w[2] = vec4f_Mul(modelMat, w[2]);
+
+			v[0] = vec4f_Mul(pvMat,w[0]);
+			v[1] = vec4f_Mul(pvMat,w[1]);
+			v[2] = vec4f_Mul(pvMat,w[2]);
+
+
+			Vec3f n = vec3f_Cross(vec3f_Sub(w[2], w[0]), vec3f_Sub(w[1], w[0]));
+			Vec3f pos = vec3f_Add(vec3f_Add(w[1] * 0.3333f, w[0] * 0.3333f),w[2]*0.3333f);
+			n.normalize();
+			
+			device.light_intensity = vec3f_Dot(n, device.light_Dir);
+
+			if (vec3f_Dot(n, vec3f_Sub(pos, camera.getPos()))>0)
+			{
+				drawTriByEdgeEquation(w, v, uvs, vns,model, device);
+			}
+		}
+
+	}
+
+}
 
 void Render::drawTriByEdgeEquation(Vec3f* w, Vec2Int* v, const Color& color, Device& device)
 {
@@ -151,8 +205,7 @@ void Render::drawTriByEdgeEquation(Vec3f* w, Vec2Int* v, Vec3f* uvs, Device& dev
 	Vec2Int& v1 = v[1];
 	Vec2Int& v2 = v[2];
 	Color color = Color(255,255,255,255);
-	int texW = device.texture->get_width();
-	int texH = device.texture->get_height();
+	
 	int minX = std::min(std::min(v0.x, v1.x), v2.x), maxX = std::max(std::max(v0.x, v1.x), v2.x);
 	int minY = std::min(std::min(v0.y, v1.y), v2.y), maxY = std::max(std::max(v0.y, v1.y), v2.y);
 
@@ -160,17 +213,6 @@ void Render::drawTriByEdgeEquation(Vec3f* w, Vec2Int* v, Vec3f* uvs, Device& dev
 	maxX = std::min(device.width - 1, maxX);
 	minY = std::max(0, minY);
 	maxY = std::min(device.height - 1, maxY);
-
-	if (v0.y == v1.y && v2.y == v1.y) {
-
-		DrawLine(minX, v0.y, maxX, v0.y, color, device);
-		return;
-	}
-	else if (v0.x == v1.x && v1.x == v2.x)
-	{
-		DrawLine(v0.x, minY, v0.x, maxY, color, device);
-		return;
-	}
 
 	float z = 0;
 
@@ -189,14 +231,52 @@ void Render::drawTriByEdgeEquation(Vec3f* w, Vec2Int* v, Vec3f* uvs, Device& dev
 			if (z > device.zBuf[y][x])
 			{
 				Vec3f uv = interpolateUVCoord(uvs, u);
-				TGAColor& tgaColor = device.texture->get(uv.x * texW, (1.- uv.y) * texH);
 
 				device.zBuf[y][x] = z;
-				SetPixel(x, y, Color(tgaColor.bgra[2], tgaColor.bgra[1], tgaColor.bgra[0], 255*device.light_intensity), device);
+				//SetPixel(x, y, Color(tgaColor.bgra[2], tgaColor.bgra[1], tgaColor.bgra[0], 255), device);
 			}
 
 		}
 	}
+}
+
+void Render::drawTriByEdgeEquation(Vec4f* w, Vec4f* v, Vec3f* uvs,Vec3f*vns,const Model&model ,Device& device)
+{
+
+	Vec2Int v0 = Vec2Int(v[0].x / v[0].w, v[0].y / v[0].w);
+	Vec2Int v1 = Vec2Int(v[1].x / v[1].w, v[1].y / v[1].w);
+	Vec2Int v2 = Vec2Int(v[2].x / v[2].w, v[2].y / v[2].w);
+
+	int minX = std::min(std::min(v0.x, v1.x), v2.x), maxX = std::max(std::max(v0.x, v1.x), v2.x);
+	int minY = std::min(std::min(v0.y, v1.y), v2.y), maxY = std::max(std::max(v0.y, v1.y), v2.y);
+	minX = std::max(0, minX);
+	maxX = std::min(device.width - 1, maxX);
+	minY = std::max(0, minY);
+	maxY = std::min(device.height - 1, maxY);
+
+	float z = 0;
+
+	for (int y = minY; y <= maxY; y++)
+	{
+		for (int x = minX; x <= maxX; x++)
+		{
+			Vec3f u = getBarycentric2D(v0, v1, v2, { x,y });
+
+			if (u.x < 0 || u.y < 0 || u.z < 0)
+				continue;
+
+			z = w[0].z * u.x + w[1].z * u.y + w[2].z * u.z;
+
+			if (z > device.zBuf[y][x])
+			{
+				Vec3f uv = interpolateUVCoord(uvs, u);
+				device.zBuf[y][x] = z;
+				SetPixel(x, y, model.getColorFromTexture(uv.x, 1 - uv.y)*device.light_intensity, device);
+			}
+
+		}
+	}
+
 }
 
 void Render::drawTriBySweeping(Vec3f* w, Vec2Int* v, const Color& color, Device& device)
@@ -258,7 +338,7 @@ Vec3f Render::interpolateUVCoord(Vec3f* uv,const Vec3f& vuw)
 Vec3f Render::getBarycentric2D(const Vec2Int& v0, const Vec2Int& v1, const Vec2Int& v2, const Vec2Int& p)
 {
 
-	Vec3f u = Vec3f_Cross(Vec3f((v1.x - v0.x),(v2.x - v0.x),(v0.x - p.x)),
+	Vec3f u = vec3f_Cross(Vec3f((v1.x - v0.x),(v2.x - v0.x),(v0.x - p.x)),
 		Vec3f( (v1.y - v0.y),(v2.y - v0.y),(v0.y - p.y)));
 
 	if (std::abs(u.z) < 1.f)
@@ -270,4 +350,3 @@ Vec3f Render::getBarycentric2D(const Vec2Int& v0, const Vec2Int& v1, const Vec2I
 
 	return { 1.f - (u.x + u.y) / (u.z) ,u.x/u.z,u.y/u.z};
 }
-
