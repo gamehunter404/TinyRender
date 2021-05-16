@@ -3,6 +3,7 @@
 
 #include"Maths.h"
 #include"tgaImage.h"
+#include<string>
 #include <vector>
 
 
@@ -19,7 +20,7 @@ private:
 	std::vector<Vec3f> _uvs;//顶点uv
 	std::vector<std::vector<Vertex>> _faces;//一个三角面
 	std::vector<Vec3f> _vns;//顶点法线
-	TGAImage texture;
+	std::string _texName;
 
 	Vec3f _scale = Vec3f(1,1,1);
 	Vec3f _rotation;
@@ -49,11 +50,11 @@ public:
 	Vec3f getTranslate() const;
 	Vec3f getScale() const;
 	Vec3f getRotation() const;
-	Color getColorFromTexture(float u,float v) const;
+	std::string getTextureName() const;
 
 	void readObjFile(const char* filename);
-	bool loadTextureFromTGA(const char*filename);
-	void setTexture(const TGAImage&texture_);
+	void setTexture(const std::string& texture_);
+
 };
 
 #endif //__MODEL_H__

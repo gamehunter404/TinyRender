@@ -3,6 +3,7 @@
 #include"Model.h"
 #include"Maths.h"
 #include"Camera.h"
+#include"TextureManager.h"
 #include<iostream>
 
 
@@ -97,21 +98,29 @@ void Render::DrawTriangle(Vec3f* w, Vec2Int* v, Vec3f* uvs, Device& device)
 
 void Render::renderModel(const Camera& camera,std::vector<Model>& models, Device& device)
 {
-	Mat4x4 viewMat = getViewMat(camera.getPos(),camera.getTarget(),camera.getUp()); //视角矩阵
-	Mat4x4 projectMat = getProjectionMat(device); //投影矩阵
-	Mat4x4 pvMat = mat4x4_Mul(projectMat, viewMat);
+	device.viewMat = getViewMat(camera.getPos(),camera.getTarget(),camera.getUp()); //视角矩阵
+	Mat4x4 perspectiveMat = getPerspectiiveMat(device.nearPlane, device.farPlane);
+	Mat4x4 orthMat = getOrthogonalMat({device.l,device.r,device.b,device.t},device.nearPlane,device.farPlane);
+	device.vpMat = mat4x4_Mul(getProjectionMat(device),device.viewMat); //投影矩阵
+	device.viewPortMat = getViewPortMat(device.width, device.height);
 
 	Vec4f w[3];//世界坐标
 	Vec3f uvs[3];//顶点uv
 	Vec3f vns[3];//顶点法线
 	Vec4f v[3];
+	Vec4f p[3];
 
-	//device.light_Dir = camera.lookDir();
+	device.light_Dir = camera.lookDir();
+
 
 	for (int n = 0; n < models.size(); n++)
 	{
 		Model& model = models[n];
-		Mat4x4 modelMat = getModelMat(model.getScale(),model.getRotation(),model.getTranslate());
+		device.modelMat = getModelMat(model.getScale(),model.getRotation(),model.getTranslate());
+		device.inverseModelMat = getInverseModelMat(model.getScale(), model.getRotation(), model.getTranslate());
+		device.texture = TextureManager::getTexture(model.getTextureName().c_str());
+		device.texWidth = device.texture->get_width();
+		device.texHeight= device.texture->get_height();
 
 		for (int i = 0; i < model.nfaces(); i++)
 		{
@@ -124,29 +133,44 @@ void Render::renderModel(const Camera& camera,std::vector<Model>& models, Device
 			uvs[1] = model.uvs(face[1].vtIndex);
 			uvs[2] = model.uvs(face[2].vtIndex);
 
-			w[0] = vec4f_Mul(modelMat, w[0]);
-			w[1] = vec4f_Mul(modelMat, w[1]);
-			w[2] = vec4f_Mul(modelMat, w[2]);
+			vns[0] = model.vns(face[0].vnIndex);
+			vns[1] = model.vns(face[1].vnIndex);
+			vns[2] = model.vns(face[2].vnIndex);
 
-			v[0] = vec4f_Mul(pvMat,w[0]);
-			v[1] = vec4f_Mul(pvMat,w[1]);
-			v[2] = vec4f_Mul(pvMat,w[2]);
+			w[0] = vec4f_Mul(device.modelMat, w[0]);
+			w[1] = vec4f_Mul(device.modelMat, w[1]);
+			w[2] = vec4f_Mul(device.modelMat, w[2]);
+
+			vns[0] = vec4f_Mul(device.inverseModelMat, vec4f_SetVec(vns[0]));
+			vns[1] = vec4f_Mul(device.inverseModelMat, vec4f_SetVec(vns[1]));
+			vns[2] = vec4f_Mul(device.inverseModelMat, vec4f_SetVec(vns[2]));
 
 
-			Vec3f n = vec3f_Cross(vec3f_Sub(w[2], w[0]), vec3f_Sub(w[1], w[0]));
-			Vec3f pos = vec3f_Add(vec3f_Add(w[1] * 0.3333f, w[0] * 0.3333f),w[2]*0.3333f);
-			n.normalize();
-			
-			device.light_intensity = vec3f_Dot(n, device.light_Dir);
+			v[0] = vec4f_Mul(device.vpMat, w[0]);
+			v[1] = vec4f_Mul(device.vpMat, w[1]);
+			v[2] = vec4f_Mul(device.vpMat, w[2]);
 
-			if (vec3f_Dot(n, vec3f_Sub(pos, camera.getPos()))>0)
+			v[0].x /= v[0].w,v[0].y /= v[0].w,v[0].z /= v[0].w, v[0].w = 1;
+			v[1].x /= v[1].w,v[1].y /= v[1].w,v[1].z /= v[1].w, v[1].w = 1;
+			v[2].x /= v[2].w,v[2].y /= v[2].w,v[2].z /= v[2].w, v[2].w = 1;
+
+			Vec3f n = vec3f_Cross(vec3f_Sub(v[2], v[0]), vec3f_Sub(v[1], v[0]));
+		
+			if (n.z < 0)
 			{
-				drawTriByEdgeEquation(w, v, uvs, vns,model, device);
+				v[0] = vec4f_Mul(device.viewPortMat, v[0]);
+				v[1] = vec4f_Mul(device.viewPortMat, v[1]);
+				v[2] = vec4f_Mul(device.viewPortMat, v[2]);
+
+				drawTriByEdgeEquation(w, v, uvs, vns, model, device);
 			}
 		}
 
 	}
 
+	device.texHeight = 0;
+	device.texWidth = 0;
+	device.texture = nullptr;
 }
 
 void Render::drawTriByEdgeEquation(Vec3f* w, Vec2Int* v, const Color& color, Device& device)
@@ -243,9 +267,9 @@ void Render::drawTriByEdgeEquation(Vec3f* w, Vec2Int* v, Vec3f* uvs, Device& dev
 void Render::drawTriByEdgeEquation(Vec4f* w, Vec4f* v, Vec3f* uvs,Vec3f*vns,const Model&model ,Device& device)
 {
 
-	Vec2Int v0 = Vec2Int(v[0].x / v[0].w, v[0].y / v[0].w);
-	Vec2Int v1 = Vec2Int(v[1].x / v[1].w, v[1].y / v[1].w);
-	Vec2Int v2 = Vec2Int(v[2].x / v[2].w, v[2].y / v[2].w);
+	Vec2Int v0 = Vec2Int(v[0].x, v[0].y);
+	Vec2Int v1 = Vec2Int(v[1].x, v[1].y);
+	Vec2Int v2 = Vec2Int(v[2].x, v[2].y);
 
 	int minX = std::min(std::min(v0.x, v1.x), v2.x), maxX = std::max(std::max(v0.x, v1.x), v2.x);
 	int minY = std::min(std::min(v0.y, v1.y), v2.y), maxY = std::max(std::max(v0.y, v1.y), v2.y);
@@ -253,8 +277,11 @@ void Render::drawTriByEdgeEquation(Vec4f* w, Vec4f* v, Vec3f* uvs,Vec3f*vns,cons
 	maxX = std::min(device.width - 1, maxX);
 	minY = std::max(0, minY);
 	maxY = std::min(device.height - 1, maxY);
-
+	
 	float z = 0;
+	float inverseW0 = 1 / v[0].z;
+	float inverseW1 = 1 / v[1].z;
+	float inverseW2 = 1 / v[2].z;
 
 	for (int y = minY; y <= maxY; y++)
 	{
@@ -265,13 +292,22 @@ void Render::drawTriByEdgeEquation(Vec4f* w, Vec4f* v, Vec3f* uvs,Vec3f*vns,cons
 			if (u.x < 0 || u.y < 0 || u.z < 0)
 				continue;
 
-			z = w[0].z * u.x + w[1].z * u.y + w[2].z * u.z;
+			//透视矫正
+			z = inverseW0 * u.x + inverseW1 * u.y + inverseW2 * u.z;
+			z = 1. / z;
 
 			if (z > device.zBuf[y][x])
 			{
-				Vec3f uv = interpolateUVCoord(uvs, u);
+				//TODO 贴图透视矫正
+				Vec3f nor = -vec3f_Add(vns[0] * u.x, vns[1] * u.y, vns[2] * u.z);
+				nor.normalize();
+				float light_intensity = vec3f_Dot(nor,device.light_Dir);
+				Vec3f uv = vec3f_Add(uvs[0] * u.x, uvs[1] * u.y, uvs[2] * u.z);
 				device.zBuf[y][x] = z;
-				SetPixel(x, y, model.getColorFromTexture(uv.x, 1 - uv.y)*device.light_intensity, device);
+
+				Color col = device.texture->getColor(uv.x * device.texWidth,
+					(1. - uv.y) * device.texHeight)* light_intensity;
+				SetPixel(x, y, col,device);
 			}
 
 		}
@@ -338,15 +374,13 @@ Vec3f Render::interpolateUVCoord(Vec3f* uv,const Vec3f& vuw)
 Vec3f Render::getBarycentric2D(const Vec2Int& v0, const Vec2Int& v1, const Vec2Int& v2, const Vec2Int& p)
 {
 
-	Vec3f u = vec3f_Cross(Vec3f((v1.x - v0.x),(v2.x - v0.x),(v0.x - p.x)),
-		Vec3f( (v1.y - v0.y),(v2.y - v0.y),(v0.y - p.y)));
+	Vec3f u = vec3f_Cross(Vec3f((v1.x - v0.x), (v2.x - v0.x), (v0.x - p.x)),Vec3f( (v1.y - v0.y),(v2.y - v0.y),(v0.y - p.y)));
 
 	if (std::abs(u.z) < 1.f)
 	{
 		//u.z <1 表示u.z的值为0。此时表示三角形已经退化
 		return {-1,1,1};
 	}
-
 
 	return { 1.f - (u.x + u.y) / (u.z) ,u.x/u.z,u.y/u.z};
 }

@@ -36,6 +36,9 @@
     <ClCompile Include="Camera.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="TextureManager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Device.h">
@@ -54,6 +57,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Camera.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

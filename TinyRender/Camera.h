@@ -21,6 +21,7 @@ private:
 	Vec3f _pos;
 	Vec3f _target;
 	Vec3f _up;
+
 };
 
 

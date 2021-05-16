@@ -20,9 +20,10 @@ Model::Model(const char* filename) : _verts(), _faces() {
         char trash;
         if (!line.compare(0, 2, "v ")) {
             iss >> trash;
-            Vec3f v;
-            iss >> v.x >> v.y >> v.z;
-            _verts.push_back(v);
+            float x, y, z;
+            iss >> x >> y >> z;
+
+            _verts.push_back({x,y,z});
         }
         else if (!line.compare(0, 2, "f ")) {
             std::vector<Vertex> f;
@@ -42,6 +43,13 @@ Model::Model(const char* filename) : _verts(), _faces() {
             iss >> trash>>trash;
             iss >> vt.x >> vt.y >> vt.z;
             _uvs.push_back(vt);
+        }
+        else if (!line.compare(0, 3, "vn "))
+        {
+            Vec3f vn;
+            iss >> trash >> trash;
+            iss >> vn.x >> vn.y >> vn.z;
+            _vns.push_back(vn);
         }
     }
     std::cerr << "# v# " << _verts.size() << " f# " << _faces.size() << std::endl;
@@ -108,13 +116,9 @@ Vec3f Model::getRotation() const
     return _rotation;
 }
 
-Color Model::getColorFromTexture(float u, float v) const
+std::string Model::getTextureName() const
 {
-
-    int x = texture.get_width()*u;
-    int y = texture.get_height()*v;
-    TGAColor tc = texture.get(x,y);
-    return Color(tc.bgra[2],tc.bgra[1],tc.bgra[0],255);
+    return _texName;
 }
 
 void Model::readObjFile(const char* filename)
@@ -155,38 +159,21 @@ void Model::readObjFile(const char* filename)
             iss >> vt.x >> vt.y >> vt.z;
             _uvs.push_back(vt);
         }
+        else if (!line.compare(0, 3, "vn "))
+        {
+            Vec3f vn;
+            iss >> trash >> trash;
+            iss >> vn.x >> vn.y >> vn.z;
+            _vns.push_back(vn);
+        }
     }
     std::cerr << "# v# " << _verts.size() << " f# " << _faces.size() << std::endl;
 }
 
-bool Model::loadTextureFromTGA(const char* filename)
+
+void Model::setTexture(const std::string& texname)
 {
-    if (filename == nullptr) {
-        return false;
-    }
-
-    bool res = true;
-
-    std::cerr << std::endl<<"-------------------------------"<<std::endl;
-
-    if (texture.read_tga_file(filename)) {
-
-        std::cerr << "successed to load texture "<<"' "<< filename <<"'"<<std::endl;
-    }
-    else {
-        std::cerr << "failed to load texture " << "' " << filename << "'" << std::endl;
-        res = false;
-    }
-
-    std::cerr << std::endl << "-------------------------------" << std::endl;
-
-
-    return res;
-}
-
-void Model::setTexture(const TGAImage& texture_)
-{
-    texture = texture_;
+    _texName = texname;
 }
 
 

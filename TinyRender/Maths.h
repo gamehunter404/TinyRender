@@ -54,8 +54,8 @@ public:
 		float m20, float m21, float m22, float m23,
 		float m30, float m31, float m32, float m33);
 	Mat4x4();
-	Mat4x4(const Vec3f& c1, const Vec3f& c2, const Vec3f& c3, const Vec3f& c4);
 
+	void mult(const Mat4x4&a);
 	void transpose();
 	inline float* operator[](int index) const
 	{
@@ -65,7 +65,6 @@ public:
 public:
 	float m[4][4];
 };
-
 
 /*float relate function*/
 float flt_Clamp(float v, float min, float max);
@@ -86,6 +85,7 @@ Vec2Int vec2i_Sub(const Vec2Int& a,const Vec2Int& b);
 /*vector3 relate function*/
 Vec3f vec3f_Zero();
 Vec3f vec3f_Add(const Vec3f&a,const Vec3f&b);
+Vec3f vec3f_Add(const Vec3f&a,const Vec3f&b,const Vec3f&c);
 Vec3f vec3f_Mul(const Vec3f&a ,float val);
 Vec3f vec3f_Sub(const Vec3f& a, const Vec3f& b);
 Vec3f vec3f_Cross(const Vec3f&a,const Vec3f&b);
@@ -100,7 +100,8 @@ Vec4f vec4f_Mul(const Mat4x4&mat,const Vec4f& v);
 
 
 //mat4x4 relate function
-void mat4x4_Mul(const Mat4x4& a, const Mat4x4& b,Mat4x4* res);
+Mat4x4 mat4x4_newByRow(const Vec3f&r1, const Vec3f& r2, const Vec3f& r3);
+Mat4x4 mat4x4_newByColmun(const Vec3f& c1,const Vec3f&c2, const Vec3f& c3);
 Mat4x4 mat4x4_Mul(const Mat4x4&a,const Mat4x4&b);
 Mat4x4 mat4x4_Transpose(const Mat4x4& m);
 Mat4x4 mat4x4_IdentityMat();
@@ -114,11 +115,13 @@ Mat4x4 getRotationZMat(float radians);
 
 
 Mat4x4 getModelMat(const Vec3f& scale,const Vec3f& rotation ,const Vec3f& tran);//获取模型变换矩阵
+Mat4x4 getInverseModelMat(const Vec3f& scale, const Vec3f& rotation, const Vec3f& tran);
 Mat4x4 getViewMat(Vec3f pos, Vec3f target,Vec3f up);//获取视口变换矩阵
 Mat4x4 getProjectionMat(const Device&device);
 Mat4x4 getPerspectiiveMat(float near,float far);//获取投影矩阵
 Mat4x4 getOrthogonalMat(const Vec4f& canonicalSize,float near,float far);//获取正交矩阵
 Mat4x4 getViewPortMat(float nx,float ny);//获取视口矩阵
+
 
 struct Color
 {

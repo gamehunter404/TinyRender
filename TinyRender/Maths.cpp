@@ -49,6 +49,11 @@ Vec3f vec3f_Add(const Vec3f& a, const Vec3f& b)
 	return Vec3f(a.x+b.x,a.y+b.y,a.z+b.z);
 }
 
+Vec3f vec3f_Add(const Vec3f& a, const Vec3f& b, const Vec3f& c)
+{
+	return Vec3f(a.x+b.x+c.x,a.y+b.y+c.y,a.z+b.z+c.z);
+}
+
 Vec3f vec3f_Mul(const Vec3f& a, float val)
 {
 	return Vec3f(a.x*val,a.y*val,a.z*val);
@@ -111,26 +116,20 @@ Vec4f vec4f_Mul(const Mat4x4& mat, const Vec4f& v)
 				 mat[3][0] * v.x + mat[3][1] * v.y + mat[3][2] * v.z + mat[3][3] * v.w);
 }
 
-void mat4x4_Mul(const Mat4x4& a, const Mat4x4& b, Mat4x4* res)
+Mat4x4 mat4x4_newByRow(const Vec3f& r1, const Vec3f& r2, const Vec3f& r3)
 {
-	Mat4x4& tmp = *res;
-	float sum = 0;
+	return Mat4x4(r1.x,r1.y,r1.z,0,
+				  r2.x,r2.y,r2.z,0,
+				  r3.x,r3.y,r3.z,0,
+				  0,0,0,1);
+}
 
-	for (int i = 0; i < 4; i++)
-	{
-
-		for (int j = 0; j < 4; j++)
-		{
-			tmp[i][j] = 0;
-
-			for (int k = 0; k < 4; k++)
-			{
-				tmp[i][j] += a[i][k] * b[k][j];
-			}
-		}
-	}
-
-
+Mat4x4 mat4x4_newByColmun(const Vec3f& c1, const Vec3f& c2, const Vec3f& c3)
+{
+	return Mat4x4(c1.x,c2.x,c3.x,0,
+				  c1.y,c2.y,c3.y,0,
+				  c1.z,c2.z,c3.z,0,
+				  0,   0,   0,   1);
 }
 
 Mat4x4 mat4x4_Mul(const Mat4x4& a, const Mat4x4& b)
@@ -222,12 +221,35 @@ Mat4x4 getRotationZMat(float radians)
 
 Mat4x4 getModelMat(const Vec3f& scale, const Vec3f& rotation, const Vec3f& tran)
 {
-	Mat4x4 res = getScaleMat(scale);
+	/*Mat4x4 res = getScaleMat(scale);
 	Mat4x4 translate = getTranslateMat(tran);
 	res = mat4x4_Mul(getRotationXMat(angleToRadians(rotation.x)), res);
 	res = mat4x4_Mul(getRotationYMat(angleToRadians(rotation.y)), res);
 	res = mat4x4_Mul(getRotationZMat(angleToRadians(rotation.z)), res);
-	res = mat4x4_Mul(getTranslateMat(tran),res);
+	res = mat4x4_Mul(getTranslateMat(tran),res);*/
+
+	Mat4x4 res = getTranslateMat(tran);
+	res.mult(getRotationZMat(angleToRadians(rotation.z)));
+	res.mult(getRotationYMat(angleToRadians(rotation.y)));
+	res.mult(getRotationXMat(angleToRadians(rotation.x)));
+	res.mult(getTranslateMat(tran));
+	res.mult(getScaleMat(scale));
+
+	return res;
+}
+
+Mat4x4 getInverseModelMat(const Vec3f& scale, const Vec3f& rotation, const Vec3f& tran)
+{
+	Mat4x4 res = mat4x4_IdentityMat();
+	res[3][0] = -tran.x;
+	res[3][1] = -tran.y;
+	res[3][2] = -tran.z;
+
+	res.mult(getRotationZMat(angleToRadians(rotation.z)));
+	res.mult(getRotationYMat(angleToRadians(rotation.y)));
+	res.mult(getRotationXMat(angleToRadians(rotation.x)));
+
+	res.mult(getScaleMat(Vec3f(1/scale.x,1/scale.y,1/scale.z)));
 
 	return res;
 }
@@ -241,18 +263,21 @@ Mat4x4 getViewMat( Vec3f pos,  Vec3f target,  Vec3f up)
 	Vec3f right = vec3f_Cross(up, to);
 	up = vec3f_Cross(to, right);
 
-	Mat4x4 res;
-	Mat4x4 mat = Mat4x4(right, up, to, vec3f_Zero());
-	mat.transpose();
+	/*Mat4x4 res = mat4x4_IdentityMat();
+	Mat4x4 mat = mat4x4_newByRow(right, up, to);
 	Mat4x4 tran = getTranslateMat(-pos);
-	mat4x4_Mul(mat, tran, &res);
+	res = mat4x4_Mul(mat, tran);*/
+	
+	Mat4x4 res = mat4x4_newByRow(right, up, to);
+	res.mult(getTranslateMat(-pos));
+
 	return res;
 }
 
 Mat4x4 getProjectionMat(const Device& device)
 {
+	/*;
 	Mat4x4 res = mat4x4_IdentityMat();
-	Vec4f canonicalSize = Vec4f(device.l,device.r,device.t,device.b);
 
 	if (device.projectionType == ProjectionType::PROJECTION_PERSPECTIVE) {
 
@@ -260,16 +285,23 @@ Mat4x4 getProjectionMat(const Device& device)
 	}
 
 	res = mat4x4_Mul(getOrthogonalMat(canonicalSize,device.nearPlane,device.farPlane),res);
-	res = mat4x4_Mul(getViewPortMat(device.width,device.height),res);
+	res = mat4x4_Mul(getViewPortMat(device.width,device.height),res);*/
+
+	Vec4f canonicalSize = Vec4f(device.l, device.r, device.b, device.t);
+	Mat4x4 res = getOrthogonalMat(canonicalSize, device.nearPlane, device.farPlane);
+
+	if (device.projectionType == ProjectionType::PROJECTION_PERSPECTIVE) {
+		res.mult(getPerspectiiveMat(device.nearPlane, device.farPlane));
+	}
 
 	return res;
 }
 
 Mat4x4 getPerspectiiveMat(float n, float f)
 {
-	return Mat4x4(-n,0,0,0,
-				   0,-n,0,0,
-				   0,0,f+n,-f*n,
+	return Mat4x4(-std::abs(n),0,0,0,
+				   0,-std::abs(n),0,0,
+				   0,0,-(f + n),-f*n,
 				   0,0,1,0);
 }
 
@@ -277,12 +309,12 @@ Mat4x4 getOrthogonalMat(const Vec4f& canonicalSize, float n, float f)
 {
 	const float& l = canonicalSize.x;
 	const float& r = canonicalSize.y;
-	const float& t = canonicalSize.z;
-	const float& b = canonicalSize.w;
+	const float& b = canonicalSize.z;
+	const float& t = canonicalSize.w;
 
 	return Mat4x4(2/(r-l),0,0,(r+l)/(l-r),
 					0,2/(t-b),0,(t+b)/(b-t),
-					0,0,2/(n-f),(f+n)/(f-n),
+					0,0,-2/(n-f),(f+n)/(f-n),
 					0,0,0,1);
 }
 
@@ -293,7 +325,6 @@ Mat4x4 getViewPortMat(float nx, float ny)
 				  0,0,1,0,
 				  0,0,0,1);
 }
-
 
 Vec3f Vec3f::operator-() const
 {
@@ -337,28 +368,25 @@ Mat4x4::Mat4x4()
 	m[0][0] = m[1][1] = m[2][2] = m[3][3] = 1;
 }
 
-Mat4x4::Mat4x4(const Vec3f& c1, const Vec3f& c2, const Vec3f& c3, const Vec3f& c4)
+void Mat4x4::mult(const Mat4x4& a)
 {
-	m[0][0] = c1.x;
-	m[1][0] = c1.y;
-	m[2][0] = c1.z;
-	m[3][0] = 0;
+	float tmp[4];
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			tmp[j] = m[i][0] * a[0][j] + 
+					 m[i][1] * a[1][j] + 
+					 m[i][2] * a[2][j] + 
+					 m[i][3] * a[3][j];
+		}
 
-	m[0][1] = c2.x;
-	m[1][1] = c2.y;
-	m[2][1] = c2.z;
-	m[3][1] = 0;
-	
-	m[0][2] = c3.x;
-	m[1][2] = c3.y;
-	m[2][2] = c3.z;
-	m[3][2] = 0;
+		m[i][0] = tmp[0];
+		m[i][1] = tmp[1];
+		m[i][2] = tmp[2];
+		m[i][3] = tmp[3];
 
-
-	m[0][3] = c4.x;
-	m[1][3] = c4.y;
-	m[2][3] = c4.z;
-	m[3][3] = 1;
+	}
 }
 
 void Mat4x4::transpose()

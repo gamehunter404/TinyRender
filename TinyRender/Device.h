@@ -1,7 +1,6 @@
 #pragma once
 #include"tgaImage.h"
 #include"Maths.h"
-#include<vector>
 
 struct Mat4x4;
 struct Vec3f;
@@ -28,15 +27,23 @@ public:
 	float** zBuf;
 	int width;
 	int height;
-
-	Vec3f light_Dir =Vec3f(0,0,-1);//光的方向
-
 	float screenRatio;
-	float nearPlane = 1.f;//近平面
-	float farPlane = 1000.;//远平面
-	float fov = 55;//垂直视域
+	float nearPlane = 0.1f;//近平面
+	float farPlane = 10000.f;//远平面
+	float fov = 60;//垂直视域
 	float l, r, t, b;
-	float light_intensity;
+
+	Mat4x4 vpMat;
+	Mat4x4 viewPortMat;
+	Mat4x4 viewMat;
+	Mat4x4 modelMat;
+	Mat4x4 inverseModelMat;
+
+	TGAImage* texture;
+	int texWidth;
+	int texHeight;
+
+	Vec3f light_Dir = Vec3f(0, 0, -1);//光的方向
 
 	ProjectionType projectionType = ProjectionType::PROJECTION_PERSPECTIVE;//投影类型
 	TriangleFillAlgorithm triangleFillSetting = TriangleFillAlgorithm::TRIFILL_EDGEEQUATION;

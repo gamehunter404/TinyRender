@@ -9,6 +9,7 @@
 #include"Maths.h"
 #include<vector>
 #include"Device.h"
+#include"TextureManager.h"
 #include"tgaImage.h"
 #include"Camera.h"
 
@@ -29,7 +30,6 @@ static HBITMAP screen_ob = NULL;		// ÀÏµÄ BITMAP
 unsigned char* screen_fb = NULL;		// frame buffer
 long screen_pitch = 0;
 
-TGAImage* defaultTexture;//Ä¬ÈÏÌùÍ¼
 Color red = Color(255, 0, 0, 255);
 Color green = Color(0, 255, 0, 255);
 Color blue = Color(0, 0, 255, 255);
@@ -195,16 +195,7 @@ void device_init(Device*device)
 	device->r = device->screenRatio * device->t;
 	device->l = -device->r;
 
-	defaultTexture = new TGAImage(screen_w, screen_h, 4);
-	TGAColor color(255,0,0,255);
-
-	for (int x = 0; x < screen_w; x++)
-	{
-		for (int y = 0; y < screen_h; y++)
-		{
-			defaultTexture->set(x, y, color);
-		}
-	}
+	
 
 }
 void device_destory(Device* device)
@@ -220,7 +211,6 @@ void device_destory(Device* device)
 
 	device->zBuf = nullptr;
 	device->frameBuf = nullptr;
-	delete defaultTexture;
 
 }
 
@@ -271,18 +261,12 @@ void loadModel(const char* filePath, Model* model)
 
 	model->readObjFile(filePath);
 }
-void loadTexture(const char* filename, Model* model)
-{
-	if (!model->loadTextureFromTGA(filename))
-	{
-		model->setTexture(*defaultTexture);
-	}
-}
+
 void initCamera(Camera* camera)
 {
 	if (camera == nullptr) return;
 
-	camera->setPos({0,0,3});
+	camera->setPos({3,0,0});
 	camera->setTarget({0,0,0});
 	camera->setUp({ 0,1,0 });
 }
@@ -300,20 +284,22 @@ int main()
 	const char* triangleObj = "triangle.obj";
 	const char* africanHeadTexture = "african_head_diffuse.tga";
 
+	TextureManager::initManager();
+	TextureManager::LoadTexture(africanHeadTexture);
+
 
 	Device device;
 	Render render;
-	float angle = 4;
 	std::vector<Model> models(2);
 	Camera camera;
 
 	loadModel(africanHead,&(models[0]));
-	loadTexture(africanHeadTexture,&(models[0]));
-
 	device_init(&device);
 	initCamera(&camera);
 
+	models[0].setTexture(africanHeadTexture);
 
+	float angle = 4;
 	Vec4f pos = vec4f_SetPoint(camera.getPos());
 
 	while (screen_exit == 0 && screen_keys[VK_ESCAPE] == 0) {
@@ -326,14 +312,16 @@ int main()
 		//Model& model = models[0];
 		//model.rotation(0,angle,0);
 		//std::cout << angle << std::endl;
-		//pos = vec4f_Mul(getRotationYMat(angleToRadians(angle)),pos);
-		//camera.setPos(pos);
+		pos = vec4f_Mul(getRotationYMat(angleToRadians(angle)),pos);
+		camera.setPos(pos);
 
-		angle += 3;
+		//angle += 3;
 
 		screen_update();
 		Sleep(1);
 	}
+
+	TextureManager::destoryManager();
 
 	device_destory(&device);
 

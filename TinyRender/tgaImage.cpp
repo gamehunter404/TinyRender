@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include"Maths.h"
 #include "tgaimage.h"
 
 TGAImage::TGAImage() : data(NULL), width(0), height(0), bytespp(0) {}
@@ -248,12 +249,27 @@ bool TGAImage::unload_rle_data(std::ofstream& out) {
     return true;
 }
 
-TGAColor TGAImage::get(int x, int y) const {
+TGAColor TGAImage::getTGAColor(int x, int y) const {
     if (!data || x < 0 || y < 0 || x >= width || y >= height) {
         return TGAColor();
     }
     return TGAColor(data + (x + y * width) * bytespp, bytespp);
 }
+
+Color TGAImage::getColor(int x, int y) const
+{
+    if (!data || x < 0 || y < 0 || x >= width || y >= height) {
+        return Color(0,0,0);
+    }
+    TGAColor col = TGAColor(data + (x + y * width) * bytespp, bytespp);
+  
+    if(bytespp == 4)
+        return Color(col.bgra[2],col.bgra[1],col.bgra[0],col.bgra[3]);
+
+    return Color(col.bgra[2], col.bgra[1], col.bgra[0], 255);
+}
+
+
 
 bool TGAImage::set(int x, int y, TGAColor& c) {
     if (!data || x < 0 || y < 0 || x >= width || y >= height) {
@@ -288,8 +304,8 @@ bool TGAImage::flip_horizontally() {
     int half = width >> 1;
     for (int i = 0; i < half; i++) {
         for (int j = 0; j < height; j++) {
-            TGAColor c1 = get(i, j);
-            TGAColor c2 = get(width - 1 - i, j);
+            TGAColor c1 = getTGAColor(i, j);
+            TGAColor c2 = getTGAColor(width - 1 - i, j);
             set(i, j, c2);
             set(width - 1 - i, j, c1);
         }
