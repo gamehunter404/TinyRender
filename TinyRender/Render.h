@@ -15,26 +15,25 @@ class Render
 {
 public:
 	
-	void WireframeRender(const Device&device);
-	void SetPixel(int x,int y,const Color&color,Device&device);
-	void DrawLine(int x0,int y0,int x1,int y1, const Color& color,Device&device);
-	void DrawTriangle(Vec3f* w, Vec2Int* v, Color&color,Device&device);
-	void DrawTriangle(Vec3f* w, Vec2Int* v, Vec3f* uvs, Device& device);
+	void SetPixel(int x,int y,const Color&color);
+	void DrawLine(int x0,int y0,int x1,int y1, const Color& color);
+	void DrawTriangle(Vec3f* w, Vec2Int* v, Color&color);
+	void DrawTriangle(Vec3f* w, Vec2Int* v, Vec3f* uvs);
 
-	void renderModel(const Camera& camera,std::vector<Model>&models,Device&device);
+	void renderModel(const Camera& camera,std::vector<Model>&models);
 
 private:
 
 	/// <summary>
 	/// 使用内外测试来进行三角形填充
 	/// </summary>
-	void drawTriByEdgeEquation(Vec3f* w, Vec2Int* v,const Color&color,Device&device);
-	void drawTriByEdgeEquation(Vec3f* w, Vec2Int* v,Vec3f*uvs, Device& device);
-	void drawTriByEdgeEquation(Vec4f* w, Vec4f* v, Vec3f* uvs,Vec3f*vns,const Model&model ,Device& device);
+	void drawTriByEdgeEquation(Vec3f* w, Vec2Int* v,const Color&color);
+	void drawTriByEdgeEquation(Vec3f* w, Vec2Int* v,Vec3f*uvs);
+	void drawTriByEdgeEquation(Vec4f* w, Vec4f* v, Vec3f* uvs,Vec3f*vns,const Model&model);
 	/// <summary>
 	/// 使用扫描线算法来进行三角形的绘制
 	/// </summary>
-	void drawTriBySweeping(Vec3f* w, Vec2Int* v,const Color&color,Device&device);
+	void drawTriBySweeping(Vec3f* w, Vec2Int* v,const Color&color);
 
 	Vec3f interpolateUVCoord(Vec3f*uv,const Vec3f& vuw);
 

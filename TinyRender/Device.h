@@ -1,4 +1,6 @@
-#pragma once
+#ifndef __DEVICE_H__
+#define __DEVICE_H__
+
 #include"tgaImage.h"
 #include"Maths.h"
 
@@ -25,8 +27,8 @@ struct Device
 public:
 	unsigned int** frameBuf;
 	float** zBuf;
-	int width;
-	int height;
+	int sereen_width;
+	int screen_height;
 	float screenRatio;
 	float nearPlane = 0.1f;//近平面
 	float farPlane = 10000.f;//远平面
@@ -49,3 +51,7 @@ public:
 	TriangleFillAlgorithm triangleFillSetting = TriangleFillAlgorithm::TRIFILL_EDGEEQUATION;
 
 };
+
+extern Device gl_Device;
+
+#endif // !__DEVICE_H__

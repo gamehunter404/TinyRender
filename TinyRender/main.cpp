@@ -19,7 +19,6 @@
 #endif
 
 
-
 int screen_w, screen_h, screen_exit = 0;
 int screen_mx = 0, screen_my = 0, screen_mb = 0;
 int screen_keys[512];	// 当前键盘按下状态
@@ -35,6 +34,11 @@ Color green = Color(0, 255, 0, 255);
 Color blue = Color(0, 0, 255, 255);
 Color white = Color(255, 255, 255, 255);
 Color black = Color(0,0,0,0);
+
+
+const char* africanHead = "Resources/african_head.obj";
+const char* triangleObj = "Resources/triangle.obj";
+const char* africanHeadTexture = "Resources/african_head_diffuse.tga";
 
 int screen_init(int w, int h, const TCHAR* title);	// 屏幕初始化
 int screen_close(void);								// 关闭屏幕
@@ -120,18 +124,6 @@ int screen_close(void) {
 	}
 	return 0;
 }
-
-static LRESULT screen_events(HWND hWnd, UINT msg,
-	WPARAM wParam, LPARAM lParam) {
-	switch (msg) {
-	case WM_CLOSE: screen_exit = 1; break;
-	case WM_KEYDOWN: screen_keys[wParam & 511] = 1; break;
-	case WM_KEYUP: screen_keys[wParam & 511] = 0; break;
-	default: return DefWindowProc(hWnd, msg, wParam, lParam);
-	}
-	return 0;
-}
-
 void screen_dispatch(void) {
 	MSG msg;
 	while (1) {
@@ -146,56 +138,34 @@ void screen_update(void) {
 	ReleaseDC(screen_handle, hDC);
 	screen_dispatch();
 }
-
-
-
-void clearFrameBuf(Device&device)
-{
-	unsigned int* fb = (unsigned int*)screen_fb;
-	int nums = screen_w * screen_h;
-
-	for (int i = 0; i < nums; i++)
-		fb[i] = black.Data();
-}
-void clearZBuffer(Device&device)
-{
-	float* zbuf = device.zBuf[0];
-	int nums = screen_w * screen_h;
-
-	for (int i = 0; i < nums; i++)
-		zbuf[i] = -FLT_MAX;
-
-}
-
-
-void device_init(Device*device)
+void device_init(Device* device)
 {
 	if (device == nullptr) return;
-	
-	int need = (screen_w * screen_h * 4 + screen_h * 2)*sizeof(void*);
-	
+
+	int need = (screen_w * screen_h * 4 + screen_h * 2) * sizeof(void*);
+
 	char* ptr = new char[need];
 
 	device->frameBuf = (unsigned int**)(ptr);
-	device->zBuf = (float**)(ptr+screen_h*sizeof(void*));
+	device->zBuf = (float**)(ptr + screen_h * sizeof(void*));
 
 	ptr += sizeof(void*) * screen_h * 2;
 
 	for (int i = 0; i < screen_h; i++)
 	{
-		device->frameBuf[i] = (unsigned int*)(screen_fb+4*i*screen_w);
-		device->zBuf[i] = (float*)(ptr+sizeof(float)*screen_w*i);
+		device->frameBuf[i] = (unsigned int*)(screen_fb + 4 * i * screen_w);
+		device->zBuf[i] = (float*)(ptr + sizeof(float) * screen_w * i);
 	}
 
-	device->width = screen_w;
-	device->height = screen_h;
+	device->sereen_width = screen_w;
+	device->screen_height = screen_h;
 	device->screenRatio = screen_w / (float)screen_h;
-	device->t = std::tan(angleToRadians(device->fov*0.5f))*device->nearPlane;
+	device->t = std::tan(angleToRadians(device->fov * 0.5f)) * device->nearPlane;
 	device->b = -device->t;
 	device->r = device->screenRatio * device->t;
 	device->l = -device->r;
 
-	
+
 
 }
 void device_destory(Device* device)
@@ -214,13 +184,53 @@ void device_destory(Device* device)
 
 }
 
+
+static LRESULT screen_events(HWND hWnd, UINT msg,
+	WPARAM wParam, LPARAM lParam) {
+	switch (msg) {
+	case WM_CLOSE: screen_exit = 1; break;
+	case WM_KEYDOWN: screen_keys[wParam & 511] = 1; break;
+	case WM_KEYUP: screen_keys[wParam & 511] = 0; break;
+	default: return DefWindowProc(hWnd, msg, wParam, lParam);
+	}
+	return 0;
+}
+void clearBuffer(Device& device)
+{
+	unsigned int* fb = (unsigned int*)screen_fb;
+	int nums = screen_w * screen_h;
+
+	for (int i = 0; i < nums; i++)
+		fb[i] = black.Data();
+
+	float* zbuf = device.zBuf[0];
+	nums = screen_w * screen_h;
+
+	for (int i = 0; i < nums; i++)
+		zbuf[i] = -FLT_MAX;
+
+}
+
+void initApp()
+{
+	device_init(&gl_Device);
+
+	TextureManager::initManager();
+}
+void destoryApp()
+{
+	device_destory(&gl_Device);
+
+	TextureManager::destoryManager();
+}
+
 void renderToFile(const char* filePath,Device&device)
 {
-	TGAImage image(device.width, device.height, 4);
+	TGAImage image(device.sereen_width, device.screen_height, 4);
 
-	for (int x = 0; x < device.width; x++)
+	for (int x = 0; x < device.sereen_width; x++)
 	{
-		for (int y = 0; y < device.height; y++)
+		for (int y = 0; y < device.screen_height; y++)
 		{
 			unsigned int color = device.frameBuf[y][x];//0xffffffff;
 			unsigned char r, g, b, a;
@@ -239,7 +249,7 @@ void renderDepthBuffer(Device&device)
 {
 	float* depthBuf = device.zBuf[0];
 	unsigned int* frameBuf = device.frameBuf[0];
-	int nums = device.width * device.height;
+	int nums = device.sereen_width * device.screen_height;
 
 	Color color = black;
 
@@ -255,22 +265,6 @@ void renderDepthBuffer(Device&device)
 
 }
 
-void loadModel(const char* filePath, Model* model)
-{
-	if (model == nullptr) return;
-
-	model->readObjFile(filePath);
-}
-
-void initCamera(Camera* camera)
-{
-	if (camera == nullptr) return;
-
-	camera->setPos({3,0,0});
-	camera->setTarget({0,0,0});
-	camera->setUp({ 0,1,0 });
-}
-
 
 int main()
 {
@@ -280,50 +274,37 @@ int main()
 	if (screen_init(800, 600, title))
 		return -1;
 
-	const char* africanHead = "african_head.obj";
-	const char* triangleObj = "triangle.obj";
-	const char* africanHeadTexture = "african_head_diffuse.tga";
-
-	TextureManager::initManager();
-	TextureManager::LoadTexture(africanHeadTexture);
-
-
-	Device device;
+	initApp();
 	Render render;
-	std::vector<Model> models(2);
-	Camera camera;
-
-	loadModel(africanHead,&(models[0]));
-	device_init(&device);
-	initCamera(&camera);
-
-	models[0].setTexture(africanHeadTexture);
-
 	float angle = 4;
+	std::vector<Model> models(1);
+	Camera camera(Vec3f(0,0,3),Vec3f(0,0,0),Vec3f(0,1,0));
+	TextureManager::LoadTexture(africanHeadTexture);
+	models[0].readObjFile(africanHead);
+	models[0].setTexture(africanHeadTexture);
+	gl_Device.viewPortMat = getViewPortMat(gl_Device.sereen_width, gl_Device.screen_height);//视口矩阵
 	Vec4f pos = vec4f_SetPoint(camera.getPos());
 
+
+
 	while (screen_exit == 0 && screen_keys[VK_ESCAPE] == 0) {
+
 		screen_dispatch();
+		clearBuffer(gl_Device);
 		
-		clearZBuffer(device);
-		clearFrameBuf(device);
-
-		render.renderModel(camera, models,device);
-		//Model& model = models[0];
-		//model.rotation(0,angle,0);
+		render.renderModel(camera, models);
+		Model& model = models[0];
+		model.rotation(0,angle,0);
 		//std::cout << angle << std::endl;
-		pos = vec4f_Mul(getRotationYMat(angleToRadians(angle)),pos);
-		camera.setPos(pos);
-
-		//angle += 3;
+		//pos = vec4f_Mul(getRotationYMat(angleToRadians(angle)),pos);
+		//camera.setPos(pos);
+		angle += 3;
 
 		screen_update();
 		Sleep(1);
 	}
 
-	TextureManager::destoryManager();
-
-	device_destory(&device);
+	destoryApp();
 
 	return 0;
 

@@ -1,5 +1,9 @@
 #include"Camera.h"
 
+Camera::Camera(Vec3f pos, Vec3f target, Vec3f up):_pos(pos), _target(target), _up(up)
+{
+}
+
 Camera::Camera()
 {
 }

@@ -5,6 +5,7 @@
 class Camera
 {
 public:
+	Camera(Vec3f pos, Vec3f target, Vec3f up);
 	Camera();
 	~Camera();
 
@@ -23,6 +24,4 @@ private:
 	Vec3f _up;
 
 };
-
-
 #endif // !__CAMERA_H__
