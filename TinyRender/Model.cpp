@@ -121,6 +121,16 @@ std::string Model::getTextureName() const
     return _texName;
 }
 
+std::string Model::getNormalTextureName() const
+{
+    return _normalTexame;
+}
+
+std::string Model::getSpecTextureName() const
+{
+    return _specTexName;
+}
+
 void Model::readObjFile(const char* filename)
 {
     _verts.clear();
@@ -176,10 +186,24 @@ void Model::setTexture(const std::string& texname)
     _texName = texname;
 }
 
+void Model::setNormalTexture(const std::string& name)
+{
+    _normalTexame = name;
+}
 
+void Model::setSpecTexture(const std::string& name)
+{
+    _specTexName = name;
+}
 
 Vec3f Model::vert(int i) {
     return _verts[i];
+}
+
+Vec3f Model::vert(int iface, int nthVert)
+{
+    auto& face = _faces[iface];
+    return _verts[face[nthVert].verIndex];
 }
 
 Vec3f Model::uvs(int i)
@@ -187,8 +211,19 @@ Vec3f Model::uvs(int i)
     return _uvs[i];
 }
 
+Vec3f Model::uvs(int iface, int nth)
+{
+    Vertex& indices = _faces[iface].at(nth);
+    return _uvs[indices.vtIndex];
+}
+
 Vec3f Model::vns(int i)
 {
-
     return _vns[i];
+}
+
+Vec3f Model::vns(int iface, int nth)
+{
+    Vertex& indices = _faces[iface].at(nth);
+    return _vns[indices.vnIndex];
 }

@@ -4,6 +4,8 @@
 #include <fstream>
 
 struct Color;
+struct Vec3f;
+struct Vec4f;
 
 #pragma pack(push,1)
 struct TGA_Header {
@@ -85,7 +87,13 @@ public:
     bool flip_vertically();
     bool scale(int w, int h);
     TGAColor getTGAColor(int x, int y) const;
+    TGAColor getTGAColor(float u,float v) const;
     Color getColor(int x,int y) const;
+    Color getColor(float u,float v) const;
+    Vec3f getVec3f(int x,int y) const;
+    Vec3f getVec3f(float u,float v)const;
+    float getSpecular(float u,float v) const;
+
     bool set(int x, int y, TGAColor& c);
     bool set(int x, int y, const TGAColor& c);
     ~TGAImage();

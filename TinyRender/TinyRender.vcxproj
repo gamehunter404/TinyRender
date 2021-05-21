@@ -148,6 +148,7 @@
     <ClCompile Include="Maths.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="Render.cpp" />
+    <ClCompile Include="Shader.cpp" />
     <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="tgaImage.cpp" />
   </ItemGroup>
@@ -157,6 +158,7 @@
     <ClInclude Include="Maths.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="Render.h" />
+    <ClInclude Include="Shader.h" />
     <ClInclude Include="TextureManager.h" />
     <ClInclude Include="tgaImage.h" />
   </ItemGroup>

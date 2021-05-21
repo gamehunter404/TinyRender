@@ -2,11 +2,44 @@
 #include"Device.h"
 #include<iostream>
 
+void projVec(const Vec4f& res, Vec2f* tar)
+{
+	if (tar == nullptr)
+		return;
+
+	tar->x = res.x;
+	tar->y = res.y;
+}
+
+void projVec(const Vec4f& res, Vec2Int* tar)
+{
+	if (tar == nullptr) 
+		return;
+
+	tar->x = res.x;
+	tar->y = res.y;
+}
+
+void projVec(const Vec4f& res, Vec3f* tar)
+{
+	if (tar == nullptr) 
+		return;
+
+	tar->x = res.x;
+	tar->y = res.y;
+	tar->z = res.z;
+}
+
 float flt_Clamp(float v, float min, float max)
 {
 	if (v < min) v = min;
 	else if (v > max) v = max;
 	return v;
+}
+
+float flt_baryInterpolation(float a, float b, float c, const Vec3f& bary)
+{
+	return a*bary.x+b*bary.y+c*bary.z;
 }
 
 float angleToRadians(float angle)
@@ -71,6 +104,21 @@ Vec3f vec3f_Cross(const Vec3f& a, const Vec3f& b)
 			a.x*b.y - b.x*a.y};
 }
 
+Vec3f vec3f_baryInterpolation(const Vec3f& a, const Vec3f& b, const Vec3f& c, const Vec3f& bary)
+{
+
+	return Vec3f(a.x*bary.x+b.x*bary.y+c.x*bary.z,a.y*bary.x+b.y*bary.y+c.y*bary.z,a.z*bary.x+b.z*bary.y+c.z*bary.z);
+}
+
+Vec3f vec3f_Reflect(const Vec3f& nor,const Vec3f& inDir)
+{
+	Vec3f res = nor;
+	res.mult(2.0f*vec3f_Dot(nor, inDir));
+	res.sub(inDir);
+	res.normalize();
+	return res;
+}
+
 float vec3f_Dot(const Vec3f& a, const Vec3f& b)
 {
 	return a.x*b.x+a.y*b.y+a.z*b.z;
@@ -78,7 +126,6 @@ float vec3f_Dot(const Vec3f& a, const Vec3f& b)
 
 Vec3f vec3f_Normalize(const Vec3f& a)
 {
-	//warning Ð¡ÐÄ³ýÁã´íÎó
 	float mag = a.magnitude()+kError;
 	return Vec3f(a.x/mag,a.y/mag,a.z/mag);
 }
@@ -108,12 +155,31 @@ Vec4f vec4f_SetVec(const Vec3f& a)
 	return Vec4f(a.x,a.y,a.z,0);
 }
 
-Vec4f vec4f_Mul(const Mat4x4& mat, const Vec4f& v)
+Vec4f mat4x4_Mul_Vec4f(const Mat4x4& mat, const Vec4f& v)
 {
 	return Vec4f(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z + mat[0][3] * v.w,
 				 mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z + mat[1][3] * v.w,
 				 mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z + mat[2][3] * v.w,
 				 mat[3][0] * v.x + mat[3][1] * v.y + mat[3][2] * v.z + mat[3][3] * v.w);
+}
+
+Mat3x3 mat3x3_Identity()
+{
+	return Mat3x3
+		(1, 0, 0,
+		0, 1, 0,
+		0, 0, 1);
+}
+
+float mat3x3_Det(const Mat3x3& m)
+{
+	float det = 0;
+
+	det += m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]);
+	det += -m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]);
+	det += m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+	return det;
 }
 
 Mat4x4 mat4x4_newByRow(const Vec3f& r1, const Vec3f& r2, const Vec3f& r3)
@@ -171,6 +237,98 @@ Mat4x4 mat4x4_IdentityMat()
 				  0,1,0,0,
 				  0,0,1,0,
 				  0,0,0,1);
+}
+
+Mat4x4 mat4x4_Inverse(const Mat4x4& m)
+{
+	Mat4x4 res = mat4x4_Adjoint(m);
+
+	float det = 0;
+	for (int j = 0; j < 4; j++)
+		det += res[0][j]*m[0][j];
+
+	res.transpose();
+	res.mult(1.0f/(det+kError));
+
+	return res;
+}
+
+float mat4x4_Det(const Mat4x4& m)
+{
+	float det = 0;
+	for (int j = 0; j < 4; j++)
+	{
+		det += m[0][j] * mat4x4_Cofactor(m,0,j);
+	}
+
+	return det;
+}
+
+Mat4x4 mat4x4_Adjoint(const Mat4x4& m)
+{
+	Mat4x4 res;
+
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			res[i][j] = mat4x4_Cofactor(m,i,j);
+		}
+	}
+
+	return res;
+}
+
+float mat4x4_Cofactor(const Mat4x4& m, int row, int col)
+{
+	float sig = (row + col) % 2 == 0?1.0f:-1.0f;
+	return sig*mat4x4_Minor(m,row,col);
+}
+
+float mat4x4_Minor(const Mat4x4& m, int row, int col)
+{
+	Mat3x3 tmp = mat4x4_Minimize(m,row,col);
+	return mat3x3_Det(tmp);
+}
+
+Mat3x3 mat4x4_Minimize(const Mat4x4& m, int row, int col)
+{
+	int r = 0, c = 0;
+	Mat3x3 res;
+
+	for (int i = 0; i < 4; i++)
+	{
+		if (i == row) continue;
+
+		for (int j = 0,c = 0; j < 4; j++)
+		{
+			if (j == col) continue;
+
+			res[r][c] = m[i][j];
+			c++;
+		}
+		r++;
+	}
+
+	return res;
+}
+
+bool mat4x4_IsEqual(const Mat4x4& a, const Mat4x4& b)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			float dif = a[i][j] - b[i][j];
+
+			if (std::abs(dif) > kError) 
+				return false;
+
+		}
+	}
+
+
+	return true;
 }
 
 Mat4x4 getScaleMat(const Vec3f& scale)
@@ -326,23 +484,32 @@ Mat4x4 getViewPortMat(float nx, float ny)
 				  0,0,0,1);
 }
 
-Vec3f Vec3f::operator-() const
-{
-	return Vec3f(-x, -y, -z);
-}
 
-Vec3f Vec3f::operator*(float val) const
+Vec3f Vec3f::operator-()
 {
-	return Vec3f(x*val,y*val,z*val);
+	return Vec3f(-x,-y,-z);
 }
 
 void Vec3f::normalize()
 {
-	//warning Ð¡ÐÄ³ýÁã´íÎó
 	float mag = magnitude()+kError;
 	x = x / mag;
 	y = y / mag;
 	z = z / mag;
+}
+
+void Vec3f::mult(float val)
+{
+	x *= val;
+	y *= val;
+	z *= val;
+}
+
+void Vec3f::sub(const Vec3f v)
+{
+	x -= v.x;
+	y -= v.y;
+	z -= v.z;
 }
 
 float Vec3f::magnitude() const
@@ -356,16 +523,16 @@ Mat4x4::Mat4x4( float m00, float m01, float m02, float m03,
 				float m30, float m31, float m32, float m33)
 {
 
-	m[0][0] = m00, m[0][1] = m01, m[0][2] = m02, m[0][3] = m03;
-	m[1][0] = m10, m[1][1] = m11, m[1][2] = m12, m[1][3] = m13;
-	m[2][0] = m20, m[2][1] = m21, m[2][2] = m22, m[2][3] = m23;
-	m[3][0] = m30, m[3][1] = m31, m[3][2] = m32, m[3][3] = m33;
+	_data[0][0] = m00, _data[0][1] = m01, _data[0][2] = m02, _data[0][3] = m03;
+	_data[1][0] = m10, _data[1][1] = m11, _data[1][2] = m12, _data[1][3] = m13;
+	_data[2][0] = m20, _data[2][1] = m21, _data[2][2] = m22, _data[2][3] = m23;
+	_data[3][0] = m30, _data[3][1] = m31, _data[3][2] = m32, _data[3][3] = m33;
 }
 
 Mat4x4::Mat4x4()
 {
-	memset(m,0,sizeof(float)*16);
-	m[0][0] = m[1][1] = m[2][2] = m[3][3] = 1;
+	memset(_data,0,sizeof(float)*16);
+	_data[0][0] = _data[1][1] = _data[2][2] = _data[3][3] = 1;
 }
 
 void Mat4x4::mult(const Mat4x4& a)
@@ -375,17 +542,26 @@ void Mat4x4::mult(const Mat4x4& a)
 	{
 		for (int j = 0; j < 4; j++)
 		{
-			tmp[j] = m[i][0] * a[0][j] + 
-					 m[i][1] * a[1][j] + 
-					 m[i][2] * a[2][j] + 
-					 m[i][3] * a[3][j];
+			tmp[j] = _data[i][0] * a[0][j] + 
+					 _data[i][1] * a[1][j] + 
+					 _data[i][2] * a[2][j] + 
+					 _data[i][3] * a[3][j];
 		}
 
-		m[i][0] = tmp[0];
-		m[i][1] = tmp[1];
-		m[i][2] = tmp[2];
-		m[i][3] = tmp[3];
+		_data[i][0] = tmp[0];
+		_data[i][1] = tmp[1];
+		_data[i][2] = tmp[2];
+		_data[i][3] = tmp[3];
 
+	}
+}
+
+void Mat4x4::mult(float val)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+			_data[i][j] *= val;
 	}
 }
 
@@ -395,7 +571,167 @@ void Mat4x4::transpose()
 	{
 		for (int j = i + 1; j < 4; j++)
 		{
-			std::swap(m[i][j],m[j][i]);
+			std::swap(_data[i][j],_data[j][i]);
 		}
 	}
+}
+BoundingBox2D::BoundingBox2D(Vec2f* v, int nums, float minX_, float maxX_, float minY_, float maxY_) :minX(0),maxX(0),minY(0),maxY(0)
+{
+	if (v == nullptr) return;
+
+	minX = minY = std::numeric_limits<float>::max();
+	maxX = maxY = std::numeric_limits<float>::min();
+
+	for (int i = 0; i < nums; i++)
+	{
+		minX = std::min(minX,v[i].x);
+		minY = std::min(minY,v[i].y);
+		maxX = std::max(maxX,v[i].x);
+		maxY = std::max(maxY,v[i].y);
+	}
+
+	minX = std::max(minX,minX_);
+	minY = std::max(minY, minY_);
+	maxX = std::min(maxX,maxX_);
+	maxY = std::min(maxY,maxY_);
+}
+
+BoundingBox2D::BoundingBox2D(Vec2Int* v, int nums, float minX_, float maxX_, float minY_, float maxY_) :minX(0), minY(0),maxX(0),maxY(0)
+{
+	if (v == nullptr) return;
+
+	minX = minY = std::numeric_limits<float>::max();
+	maxX = maxY = std::numeric_limits<float>::min();
+
+	for (int i = 0; i < nums; i++)
+	{
+		minX = std::min(minX, static_cast<float>(v[i].x));
+		minY = std::min(minY, static_cast<float>(v[i].y));
+		maxX = std::max(maxX, static_cast<float>(v[i].x));
+		maxY = std::max(maxY, static_cast<float>(v[i].y));
+	}
+
+	minX = std::max(minX, minX_);
+	minY = std::max(minY, minY_);
+	maxX = std::min(maxX, maxX_);
+	maxY = std::min(maxY, maxY_);
+}
+
+Color::Color(unsigned char r_, unsigned char g_, unsigned char b_, unsigned char a_) :_r(r_), _g(g_), _b(b_), _a(a_)
+{
+	float div = (float)a_ / 255;
+	r_ = r_ * div;
+	g_ = g_ * div;
+	b_ = b_ * div;
+
+	_data = (0xff000000) | (r_ << 16) | (g_ << 8) | (b_);
+}
+
+Color::Color(unsigned char r_, unsigned char g_, unsigned char b_) :_r(r_), _g(g_), _b(b_), _a(255)
+{
+	_data = (0xff000000) | (_r << 16) | (_g << 8) | (_b);
+}
+
+void Color::set(unsigned char r_, unsigned char g_, unsigned char b_, unsigned char a_)
+{
+	float div = (float)a_ / 255;
+	r_ = r_ * div;
+	g_ = g_ * div;
+	b_ = b_ * div;
+
+	_data = (0xff000000) | (r_ << 16) | (g_ << 8) | (b_);
+}
+
+void Color::set(unsigned char r_, unsigned char g_, unsigned char b_)
+{
+	_r = r_;
+	_g = g_;
+	_b = b_;
+	_data = (0xff000000) | (_r << 16) | (_g << 8) | (_b);
+}
+
+unsigned char Color::r()
+{
+	return _r;
+}
+
+unsigned char Color::g()
+{
+	return _g;
+}
+
+unsigned char Color::b()
+{
+	return _b;
+}
+
+unsigned int Color::Data() const
+{
+	return _data;
+
+}
+
+Color Color::operator*(float val) const
+{
+	val = flt_Clamp(val, 0.f, 1.f);
+	return Color(_r * val, _g * val, _b * val);
+}
+
+Mat3x3::Mat3x3(float m00, float m01, float m02, 
+	float m10, float m11, float m12, 
+	float m20, float m21, float m22)
+{
+	_data[0][0] = m00;
+	_data[0][1] = m01;
+	_data[0][2] = m02;
+
+	_data[1][0] = m10;
+	_data[1][1] = m11;
+	_data[1][2] = m12;
+
+	_data[2][0] = m20;
+	_data[2][1] = m21;
+	_data[2][2] = m22;
+
+}
+
+Mat3x3::Mat3x3()
+{
+	memset(_data, 0x00, sizeof(float) * 9);
+}
+
+void Mat3x3::mult(const Mat3x3& a)
+{
+	float tmp[3];
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			tmp[j] = _data[i][0] * a[0][j] +
+					 _data[i][1] * a[1][j] +
+					 _data[i][2] * a[2][j];
+		}
+
+		_data[i][0] = tmp[0];
+		_data[i][1] = tmp[1];
+		_data[i][2] = tmp[2];
+
+	}
+}
+
+void Mat3x3::mult(float val)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+			_data[i][j] *= val;
+	}
+}
+
+void Mat3x3::transpose()
+{
+	std::swap(_data[0][1],_data[1][0]);
+	std::swap(_data[0][2], _data[2][0]);
+	std::swap(_data[1][2], _data[2][1]);
+
 }

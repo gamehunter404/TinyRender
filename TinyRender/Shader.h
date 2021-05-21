@@ -16,16 +16,44 @@ public:
 
 
 
-class GouraudShader:public IShader
+class TextureShader:public IShader
 {
 public:
 
 	Vec4f vertex(int iface, int nthVert);
 	bool fragment(const Vec3f& bar, Color& color);
-	virtual ~GouraudShader();
+	virtual ~TextureShader();
 
 };
 
+class LightIntensityShader :public IShader
+{
+public:
+	virtual ~LightIntensityShader();
+	Vec4f vertex(int iface, int nthVert);
+	bool fragment(const Vec3f& bar, Color& color);
+};
+
+class NormalMapShader :public IShader
+{
+public:
+	virtual ~NormalMapShader();
+	Vec4f vertex(int iface, int nthVert);
+	bool fragment(const Vec3f& bar, Color& color);
+};
+
+class PhongShader :public IShader
+{
+public:
+	virtual ~PhongShader();
+	Vec4f vertex(int iface, int nthVert);
+	bool fragment(const Vec3f& bar, Color& color);
+
+private:
+	float k_s = 0.6f;
+	float k_d = 1.0f;
+	
+};
 
 #endif // !__ISHADER_H__
 

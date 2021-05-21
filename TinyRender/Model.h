@@ -21,6 +21,8 @@ private:
 	std::vector<std::vector<Vertex>> _faces;//一个三角面
 	std::vector<Vec3f> _vns;//顶点法线
 	std::string _texName;
+	std::string _normalTexame;
+	std::string _specTexName;
 
 	Vec3f _scale = Vec3f(1,1,1);
 	Vec3f _rotation;
@@ -38,10 +40,13 @@ public:
 	int nuvs();
 	int nvns();
 	Vec3f vert(int i);
+	Vec3f vert(int iface, int nthVert);
 	Vec3f uvs(int i);
+	Vec3f uvs(int iface,int nth);
 	Vec3f vns(int i);
+	Vec3f vns(int iface,int nth);
 	std::vector<Vertex> face(int idx);
-	
+
 	//旋转，缩放，平移
 	void translate(float x,float y,float z);
 	void scale(float x,float y,float z);
@@ -51,10 +56,13 @@ public:
 	Vec3f getScale() const;
 	Vec3f getRotation() const;
 	std::string getTextureName() const;
+	std::string getNormalTextureName() const;
+	std::string getSpecTextureName()const;
 
 	void readObjFile(const char* filename);
 	void setTexture(const std::string& texture_);
-
+	void setNormalTexture(const std::string& name);
+	void setSpecTexture(const std::string&name);
 };
 
 #endif //__MODEL_H__

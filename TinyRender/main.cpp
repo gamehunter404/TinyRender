@@ -35,10 +35,20 @@ Color blue = Color(0, 0, 255, 255);
 Color white = Color(255, 255, 255, 255);
 Color black = Color(0,0,0,0);
 
+const char* pf_TriangleObj = "Resources/triangle.obj";
 
-const char* africanHead = "Resources/african_head.obj";
-const char* triangleObj = "Resources/triangle.obj";
-const char* africanHeadTexture = "Resources/african_head_diffuse.tga";
+
+const char* pf_AfricanHead = "Resources/african_head.obj";
+const char* pf_AfricanHeadTexture = "Resources/african_head_diffuse.tga";
+const char* pf_AfricanHeadNormalMap = "Resources/african_head_nm.tga";;
+const char* pf_AfricanHeadSpecTexture = "Resources/african_head_spec.tga";
+
+const char* pf_DiabloObj = "Resources/diablo3_pose.obj";
+const char* pf_DiablTexture = "Resources/diablo3_pose_diffuse.tga";
+const char* pf_DiabloNormalTexture = "Resources/diablo3_pose_nm.tga";
+const char* pf_DiabloSpecTexture = "Resources/diablo3_pose_spec.tga";
+
+const char* pf_OutputTexture = "Resources/test.tga";
 
 int screen_init(int w, int h, const TCHAR* title);	// 屏幕初始化
 int screen_close(void);								// 关闭屏幕
@@ -157,7 +167,7 @@ void device_init(Device* device)
 		device->zBuf[i] = (float*)(ptr + sizeof(float) * screen_w * i);
 	}
 
-	device->sereen_width = screen_w;
+	device->screen_width = screen_w;
 	device->screen_height = screen_h;
 	device->screenRatio = screen_w / (float)screen_h;
 	device->t = std::tan(angleToRadians(device->fov * 0.5f)) * device->nearPlane;
@@ -183,17 +193,17 @@ void device_destory(Device* device)
 	device->frameBuf = nullptr;
 
 }
+void initApp()
+{
+	device_init(&gl_Device);
 
+	TextureManager::initManager();
+}
+void destoryApp()
+{
+	device_destory(&gl_Device);
 
-static LRESULT screen_events(HWND hWnd, UINT msg,
-	WPARAM wParam, LPARAM lParam) {
-	switch (msg) {
-	case WM_CLOSE: screen_exit = 1; break;
-	case WM_KEYDOWN: screen_keys[wParam & 511] = 1; break;
-	case WM_KEYUP: screen_keys[wParam & 511] = 0; break;
-	default: return DefWindowProc(hWnd, msg, wParam, lParam);
-	}
-	return 0;
+	TextureManager::destoryManager();
 }
 void clearBuffer(Device& device)
 {
@@ -211,24 +221,23 @@ void clearBuffer(Device& device)
 
 }
 
-void initApp()
-{
-	device_init(&gl_Device);
-
-	TextureManager::initManager();
-}
-void destoryApp()
-{
-	device_destory(&gl_Device);
-
-	TextureManager::destoryManager();
+static LRESULT screen_events(HWND hWnd, UINT msg,
+	WPARAM wParam, LPARAM lParam) {
+	switch (msg) {
+	case WM_CLOSE: screen_exit = 1; break;
+	case WM_KEYDOWN: screen_keys[wParam & 511] = 1; break;
+	case WM_KEYUP: screen_keys[wParam & 511] = 0; break;
+	default: return DefWindowProc(hWnd, msg, wParam, lParam);
+	}
+	return 0;
 }
 
-void renderToFile(const char* filePath,Device&device)
-{
-	TGAImage image(device.sereen_width, device.screen_height, 4);
 
-	for (int x = 0; x < device.sereen_width; x++)
+void renderToTgaFile(const char* filePath,Device&device)
+{
+	TGAImage image(device.screen_width, device.screen_height, 4);
+
+	for (int x = 0; x < device.screen_width; x++)
 	{
 		for (int y = 0; y < device.screen_height; y++)
 		{
@@ -249,7 +258,7 @@ void renderDepthBuffer(Device&device)
 {
 	float* depthBuf = device.zBuf[0];
 	unsigned int* frameBuf = device.frameBuf[0];
-	int nums = device.sereen_width * device.screen_height;
+	int nums = device.screen_width * device.screen_height;
 
 	Color color = black;
 
@@ -264,7 +273,20 @@ void renderDepthBuffer(Device&device)
 	}
 
 }
-
+void setAfricanHeadModel(Model&model)
+{
+	model.setTexture(pf_AfricanHeadTexture);
+	model.setNormalTexture(pf_AfricanHeadNormalMap);
+	model.setSpecTexture(pf_AfricanHeadSpecTexture);
+	model.readObjFile(pf_AfricanHead);
+}
+void setDiabloModel(Model& model)
+{
+	model.setTexture(pf_DiablTexture);
+	model.setNormalTexture(pf_DiabloNormalTexture);
+	model.setSpecTexture(pf_DiabloSpecTexture);
+	model.readObjFile(pf_DiabloObj);
+}
 
 int main()
 {
@@ -276,33 +298,53 @@ int main()
 
 	initApp();
 	Render render;
+	TextureShader gouraudShader;
+	NormalMapShader normalMapShader;
+	LightIntensityShader lightIntensityShader;
+	PhongShader phongShader;
 	float angle = 4;
 	std::vector<Model> models(1);
-	Camera camera(Vec3f(0,0,3),Vec3f(0,0,0),Vec3f(0,1,0));
-	TextureManager::LoadTexture(africanHeadTexture);
-	models[0].readObjFile(africanHead);
-	models[0].setTexture(africanHeadTexture);
-	gl_Device.viewPortMat = getViewPortMat(gl_Device.sereen_width, gl_Device.screen_height);//视口矩阵
+	Camera camera(Vec3f(1,1,4),Vec3f(0,0,0),Vec3f(0,1,0));
+	
+	TextureManager::LoadTexture(pf_AfricanHeadTexture);
+	TextureManager::LoadTexture(pf_AfricanHeadNormalMap);
+	TextureManager::LoadTexture(pf_AfricanHeadSpecTexture);
+	TextureManager::LoadTexture(pf_DiabloNormalTexture);
+	TextureManager::LoadTexture(pf_DiabloSpecTexture);
+	TextureManager::LoadTexture(pf_DiablTexture);
+	
 	Vec4f pos = vec4f_SetPoint(camera.getPos());
+	gl_Device.light_Dir = { -1,-1,-1 };
+	gl_Device.light_Dir.normalize();
+	gl_Device.viewPortMat = getViewPortMat(gl_Device.screen_width, gl_Device.screen_height);//视口矩阵
+	gl_Device.shader = &gouraudShader;
 
+	//setAfricanHeadModel(models[0]);
+	setDiabloModel(models[0]);
 
-
+	auto identityM = mat4x4_IdentityMat();
+	identityM[0][0]= 0;
 	while (screen_exit == 0 && screen_keys[VK_ESCAPE] == 0) {
 
 		screen_dispatch();
 		clearBuffer(gl_Device);
 		
-		render.renderModel(camera, models);
-		Model& model = models[0];
-		model.rotation(0,angle,0);
+		render.renderWithShader(camera, models);
+		//Model& model = models[0];
+		//model.rotation(0,angle,0);
 		//std::cout << angle << std::endl;
-		//pos = vec4f_Mul(getRotationYMat(angleToRadians(angle)),pos);
+		//pos = mat4x4_Mul_Vec4f(getRotationYMat(angleToRadians(angle)),pos);
 		//camera.setPos(pos);
-		angle += 3;
+		
+		//Mat4x4 rotation = getRotationYMat(angleToRadians(angle));
+
+		//angle += 2;
+
 
 		screen_update();
 		Sleep(1);
 	}
+	renderToTgaFile(pf_OutputTexture,gl_Device);
 
 	destoryApp();
 

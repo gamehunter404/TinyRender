@@ -256,20 +256,93 @@ TGAColor TGAImage::getTGAColor(int x, int y) const {
     return TGAColor(data + (x + y * width) * bytespp, bytespp);
 }
 
+TGAColor TGAImage::getTGAColor(float u, float v) const
+{
+    int x = u * width;
+    int y = v * height;
+
+    if (!data || x < 0 || y < 0 || x >= width || y >= height) {
+        return TGAColor();
+    }
+    return TGAColor(data + (x + y * width) * bytespp, bytespp);
+}
+
 Color TGAImage::getColor(int x, int y) const
 {
     if (!data || x < 0 || y < 0 || x >= width || y >= height) {
         return Color(0,0,0);
     }
-    TGAColor col = TGAColor(data + (x + y * width) * bytespp, bytespp);
-  
-    if(bytespp == 4)
-        return Color(col.bgra[2],col.bgra[1],col.bgra[0],col.bgra[3]);
+    
+    unsigned char* ptr = data + (x + y * width) * bytespp;
 
-    return Color(col.bgra[2], col.bgra[1], col.bgra[0], 255);
+    if(bytespp == 4)
+        return Color(ptr[2], ptr[1], ptr[0], ptr[3]);
+
+    return Color(ptr[2], ptr[1], ptr[0], 255);
 }
 
+Color TGAImage::getColor(float u, float v) const
+{
+    int x = u * width;
+    int y = v * height;
 
+    if (!data || x < 0 || y < 0 || x >= width || y >= height) {
+        return Color(0, 0, 0);
+    }
+
+    unsigned char* ptr = data + (x + y * width) * bytespp;
+
+    if (bytespp == 4)
+        return Color(ptr[2], ptr[1], ptr[0], ptr[3]);
+
+    return Color(ptr[2], ptr[1], ptr[0], 255);
+}
+
+Vec3f TGAImage::getVec3f(int x, int y) const
+{
+    if (!data || x < 0 || y < 0 || x >= width || y >= height) {
+        return Vec3f(0, 0, 0);
+    }
+
+    TGAColor c = TGAColor(data+(y * width + x)*bytespp,bytespp);
+    Vec3f res;
+    res.z = (float)c[0] / 255.f * 2.f - 1.f;
+    res.y = (float)c[1] / 255.f * 2.f - 1.f;
+    res.x = (float)c[2] / 255.f * 2.f - 1.f;
+
+    return res;
+}
+
+Vec3f TGAImage::getVec3f(float u, float v) const
+{
+    int x = u * width;
+    int y = v * height;
+
+    if (!data || x < 0 || y < 0 || x >= width || y >= height) {
+        return Vec3f(0, 0, 0);
+    }
+
+    TGAColor c = TGAColor(data + (y * width + x) * bytespp, bytespp);
+    Vec3f res;
+    res.z = (float)c[0] / 255.f * 2.f - 1.f;
+    res.y = (float)c[1] / 255.f * 2.f - 1.f;
+    res.x = (float)c[2] / 255.f * 2.f - 1.f;
+
+    return res;
+}
+
+float TGAImage::getSpecular(float u, float v) const
+{
+    int x = u * width;
+    int y = v * height;
+
+    if (x < 0 || x >= width || y < 0 || y >= height) 
+        return 0.0f;
+
+    TGAColor col = getTGAColor(x,y);
+
+    return col[0]/1.0f;
+}
 
 bool TGAImage::set(int x, int y, TGAColor& c) {
     if (!data || x < 0 || y < 0 || x >= width || y >= height) {
