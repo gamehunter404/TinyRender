@@ -97,28 +97,35 @@ void Render::renderWithShader(const Camera& camera, std::vector<Model>& models)
 	IShader& shader = *(gl_Device.shader);
 	Vec4f w[3];
 	
+
 	gl_Device.varying_eyePos = camera.getPos();
 	gl_Device.viewMat = getViewMat(camera.getPos(), camera.getTarget(), camera.getUp()); 
-	gl_Device.uniform_vpMat = mat4x4_Mul(getProjectionMat(gl_Device), gl_Device.viewMat); 
+	gl_Device.uniform_projectionMat = mat4x4_Mul(getProjectionMat(gl_Device), gl_Device.viewMat); 
+	gl_Device.mvpInvMat = mat4x4_Mul(gl_Device.viewPortMat, gl_Device.uniform_projectionMat);
 
 	for (int n = 0; n < models.size(); n++)
 	{
 		Model& model = models[n];
 		gl_Device.modelMat = getModelMat(model.getScale(), model.getRotation(), model.getTranslate());
+		gl_Device.mvpInvMat = mat4x4_Mul(gl_Device.mvpInvMat,gl_Device.modelMat); //gl_Device.mvpInvMat * gl_Device.modelMat;
+		gl_Device.mvpInvMat = mat4x4_Inverse(gl_Device.mvpInvMat);
 		gl_Device.inverseModelMat = getInverseModelMat(model.getScale(), model.getRotation(), model.getTranslate());
-		//gl_Device.inverseModelMat = mat4x4_Inverse(gl_Device.modelMat);
 		gl_Device.texture = TextureManager::getTexture(model.getTextureName().c_str());
 		gl_Device.normalTexture = TextureManager::getTexture(model.getNormalTextureName().c_str());
 		gl_Device.specularTexture = TextureManager::getTexture(model.getSpecTextureName().c_str());
+		gl_Device.tangentNormalTexture = TextureManager::getTexture(model.getTangentTextureName().c_str());
 		gl_Device.model = &model;
 
+
+		// generate shadow map
+		if (gl_Device.generateShadowMap)
+			renderShadow(model,gl_Device);
 
 		for (int i = 0; i < model.nfaces(); i++)
 		{
 			for (int k = 0; k < 3; k++)
 			{
 				w[k] = shader.vertex(i,k);
-				//outpuVertex(i,k,w[k]);
 			}
 
 			switch (gl_Device.faceCulling)
@@ -145,7 +152,7 @@ void Render::renderWithShader(const Camera& camera, std::vector<Model>& models)
 void Render::renderModel(const Camera& camera,std::vector<Model>& models)
 {
 	gl_Device.viewMat = getViewMat(camera.getPos(),camera.getTarget(),camera.getUp()); 
-	gl_Device.uniform_vpMat = mat4x4_Mul(getProjectionMat(gl_Device), gl_Device.viewMat); 
+	gl_Device.uniform_projectionMat = mat4x4_Mul(getProjectionMat(gl_Device), gl_Device.viewMat); 
 
 	Vec4f w[3];
 	Vec3f uvs[3];
@@ -161,7 +168,7 @@ void Render::renderModel(const Camera& camera,std::vector<Model>& models)
 
 		for (int i = 0; i < model.nfaces(); i++)
 		{
-			auto& face = model.face(i);
+			auto face = model.face(i);
 			w[0] = vec4f_SetPoint(model.vert(face[0].verIndex));
 			w[1] = vec4f_SetPoint(model.vert(face[1].verIndex));
 			w[2] = vec4f_SetPoint(model.vert(face[2].verIndex));
@@ -185,9 +192,9 @@ void Render::renderModel(const Camera& camera,std::vector<Model>& models)
 			projVec(mat4x4_Mul_Vec4f(gl_Device.inverseModelMat,
 				vec4f_SetVec(vns[2])),&vns[2]);
 
-			v[0] = mat4x4_Mul_Vec4f(gl_Device.uniform_vpMat, w[0]);
-			v[1] = mat4x4_Mul_Vec4f(gl_Device.uniform_vpMat, w[1]);
-			v[2] = mat4x4_Mul_Vec4f(gl_Device.uniform_vpMat, w[2]);
+			v[0] = mat4x4_Mul_Vec4f(gl_Device.uniform_projectionMat, w[0]);
+			v[1] = mat4x4_Mul_Vec4f(gl_Device.uniform_projectionMat, w[1]);
+			v[2] = mat4x4_Mul_Vec4f(gl_Device.uniform_projectionMat, w[2]);
 
 			v[0] = mat4x4_Mul_Vec4f(gl_Device.viewPortMat, v[0]);
 			v[1] = mat4x4_Mul_Vec4f(gl_Device.viewPortMat, v[1]);
@@ -210,6 +217,81 @@ void Render::renderModel(const Camera& camera,std::vector<Model>& models)
 
 	
 	gl_Device.texture = nullptr;
+}
+void Render::renderShadow(Model& model,Device& device)
+{
+	if (device.shadowBuf == nullptr) return;
+	
+	//shadow mapping
+	//https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
+
+
+	Vec4f w[3];
+	Vec2Int v[3];
+
+	float t = 1.5f;
+	float b = -t;
+	float r = device.screenRatio * t;
+	float l = -r;
+	float n = 1.0f;
+	float f = 7.5f;
+	FaceCulling cullingModel = FaceCulling::FACECULLING_FRONT;
+
+	device.lightSpaceMat = getViewPortMat(device.screen_width, device.screen_height);
+	
+	//Because we're modelling a directional light source, 
+	//all its light rays are parallel. For this reason, 
+	//we're going to use an orthographic projection matrix for the light source where there is no perspective deform
+	device.lightSpaceMat.mult(getOrthogonalMat(Vec4f(l,r,b,t),n,f));
+
+	//Under the condition of parallel light, 
+	//the translation of the object will not affect the generation of ShadowMap.
+	// so we can assume that the obj is at (0,0,0)
+	// beside the light`s pos may be in the obj，so we scale it by 100
+	device.lightSpaceMat.mult(getViewMat(-gl_Device.light_Dir * 3, Vec3f(0, 0, 0), Vec3f(0, 1, 0)));
+	device.lightSpaceMat.mult(getModelMat(model.getScale(), model.getRotation(),Vec3f(0,0,0)));
+
+	for (int k = 0; k < model.nfaces(); k++)
+	{
+		for (int i = 0; i < 3; i++)
+		{
+			w[i] = vec4f_SetPoint(model.vert(k, i));
+			w[i] = mat4x4_Mul_Vec4f(device.lightSpaceMat,w[i]);
+			w[i] = perspectiveDivision(w[i]);
+			projVec(w[i],&v[i]);
+		}
+
+		bool backFace = isBackFace(w[0], w[1], w[2]);
+
+		if (cullingModel == FaceCulling::FACECULLING_BACK && backFace)
+			continue;
+
+		if (cullingModel == FaceCulling::FACECULLING_FRONT && !backFace)
+			continue;
+
+
+
+		BoundingBox2D bb = BoundingBox2D(v, 3, 0,
+			device.screen_width - 1, 0, device.screen_height - 1);
+
+		for (int y = bb.minY; y <= bb.maxY; ++y)
+		{
+			for (int x = bb.minX; x <= bb.maxX; ++x)
+			{
+				Vec3f bar = getBarycentric2D(v[0],v[1],v[2],Vec2Int(x,y));
+
+				if (bar.x < 0 || bar.y < 0 || bar.z < 0)
+					continue;
+
+				float z = bar.x * w[0].z + bar.y * w[1].z + bar.z * w[2].z;
+
+				if (z < device.shadowBuf[y][x])
+				{
+					device.shadowBuf[y][x] = z;
+				}
+			}
+		}
+	}
 }
 void Render::drawTriByEdgeEquation(Vec3f* w, Vec2Int* v, const Color& color)
 {
@@ -353,12 +435,10 @@ void Render::rasterizedTriangle(Vec4f*w,IShader&shader)
 	if (w == nullptr)
 		return;
 
-	
 	Vec2Int v[3]; 
 	projVec(w[0], &v[0]);
 	projVec(w[1], &v[1]);
 	projVec(w[2], &v[2]);
-
 
 	Color color(255, 255, 255, 255);
 	BoundingBox2D bbox(v, 3, 0, gl_Device.screen_width-1, 0, gl_Device.screen_height-1);
@@ -367,9 +447,8 @@ void Render::rasterizedTriangle(Vec4f*w,IShader&shader)
 	int minY = static_cast<int>(bbox.minY);
 	int maxY = static_cast<int>(bbox.maxY);
 
-	float inverseW0 = 1 / w[0].z;
-	float inverseW1 = 1 / w[1].z;
-	float inverseW2 = 1 / w[2].z;
+	static int count = 0;
+	count++;
 
 	for (int y = minY; y <= maxY; y++)
 	{
@@ -380,12 +459,11 @@ void Render::rasterizedTriangle(Vec4f*w,IShader&shader)
 			if (bar.x < 0 || bar.y < 0 || bar.z < 0) 
 				continue;
 
-			gl_Device.varying_PixelDepth = inverseW0 * bar.x + inverseW1 * bar.y + inverseW2 * bar.z;
-			gl_Device.varying_PixelDepth = 1. / gl_Device.varying_PixelDepth;
+			gl_Device.varying_PixelDepth = w[0].z * bar.x + w[1].z * bar.y + w[2].z * bar.z;
 
 			bool discard = shader.fragment(bar, color);
 			
-			if (gl_Device.varying_PixelDepth > gl_Device.zBuf[y][x])
+			if (gl_Device.varying_PixelDepth < gl_Device.zBuf[y][x])
 			{
 				gl_Device.zBuf[y][x] = gl_Device.varying_PixelDepth;
 				SetPixel(x, y, color);

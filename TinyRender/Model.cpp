@@ -131,6 +131,11 @@ std::string Model::getSpecTextureName() const
     return _specTexName;
 }
 
+std::string Model::getTangentTextureName() const
+{
+    return _tangentTexName;
+}
+
 void Model::readObjFile(const char* filename)
 {
     _verts.clear();
@@ -189,6 +194,11 @@ void Model::setTexture(const std::string& texname)
 void Model::setNormalTexture(const std::string& name)
 {
     _normalTexame = name;
+}
+
+void Model::setTangentTextureName(const std::string& name)
+{
+    _tangentTexName = name;
 }
 
 void Model::setSpecTexture(const std::string& name)

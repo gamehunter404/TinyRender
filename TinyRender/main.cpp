@@ -36,19 +36,21 @@ Color white = Color(255, 255, 255, 255);
 Color black = Color(0,0,0,0);
 
 const char* pf_TriangleObj = "Resources/triangle.obj";
-
+const char* pf_cubeObj = "Resources/cube.obj";
 
 const char* pf_AfricanHead = "Resources/african_head.obj";
 const char* pf_AfricanHeadTexture = "Resources/african_head_diffuse.tga";
 const char* pf_AfricanHeadNormalMap = "Resources/african_head_nm.tga";;
 const char* pf_AfricanHeadSpecTexture = "Resources/african_head_spec.tga";
+const char* pf_AfricanHeadTangentNormalTexture = "Resources/african_head_nm_tangent.tga";
 
 const char* pf_DiabloObj = "Resources/diablo3_pose.obj";
 const char* pf_DiablTexture = "Resources/diablo3_pose_diffuse.tga";
 const char* pf_DiabloNormalTexture = "Resources/diablo3_pose_nm.tga";
 const char* pf_DiabloSpecTexture = "Resources/diablo3_pose_spec.tga";
+const char* pf_DiabloTangentNormalTexture = "Resources/diablo3_pose_nm_tangent.tga";
 
-const char* pf_OutputTexture = "Resources/test.tga";
+const char* pf_OutputTexture = "Resources/withShadow.tga";
 
 int screen_init(int w, int h, const TCHAR* title);	// 屏幕初始化
 int screen_close(void);								// 关闭屏幕
@@ -62,7 +64,7 @@ static LRESULT screen_events(HWND, UINT, WPARAM, LPARAM);
 
 
 // 初始化窗口并设置标题
-int screen_init(int w, int h, const TCHAR* title) {
+int screen_init(int w, int h, const wchar_t* title) {
 	WNDCLASS wc = { CS_BYTEALIGNCLIENT, (WNDPROC)screen_events, 0, 0, 0,
 		NULL, NULL, NULL, NULL, _T("SCREEN3.1415926") };
 	BITMAPINFO bi = { { sizeof(BITMAPINFOHEADER), w, -h, 1, 32, BI_RGB,
@@ -152,30 +154,40 @@ void device_init(Device* device)
 {
 	if (device == nullptr) return;
 
-	int need = (screen_w * screen_h * 4 + screen_h * 2) * sizeof(void*);
-
-	char* ptr = new char[need];
+	long long need = screen_w * screen_h * sizeof(float)*2 + screen_h * 3* sizeof(void*);
+	unsigned char* ptr = new unsigned char[need];
 
 	device->frameBuf = (unsigned int**)(ptr);
 	device->zBuf = (float**)(ptr + screen_h * sizeof(void*));
+	device->shadowBuf = (float**)(ptr + 2*screen_h*sizeof(void*));
 
-	ptr += sizeof(void*) * screen_h * 2;
+	ptr += sizeof(void*) * screen_h * 3;
+	unsigned char* shadowBufPtr = ptr + sizeof(float)*screen_h*screen_w;
 
 	for (int i = 0; i < screen_h; i++)
 	{
 		device->frameBuf[i] = (unsigned int*)(screen_fb + 4 * i * screen_w);
 		device->zBuf[i] = (float*)(ptr + sizeof(float) * screen_w * i);
+		device->shadowBuf[i] = (float*)(shadowBufPtr+sizeof(float)*screen_w*i);
 	}
 
 	device->screen_width = screen_w;
 	device->screen_height = screen_h;
 	device->screenRatio = screen_w / (float)screen_h;
-	device->t = std::tan(angleToRadians(device->fov * 0.5f)) * device->nearPlane;
-	device->b = -device->t;
-	device->r = device->screenRatio * device->t;
-	device->l = -device->r;
 
-
+	if (device->projectionType == ProjectionType::PROJECTION_PERSPECTIVE) {
+		device->t = std::tan(angleToRadians(device->fov * 0.5f)) * device->nearPlane;
+		device->b = -device->t;
+		device->r = device->screenRatio * device->t;
+		device->l = -device->r;
+	}
+	else {
+		device->t = 1.5f;
+		device->b = -device->t;
+		device->r = device->screenRatio*device->t;
+		device->l = -device->r;
+	}
+	
 
 }
 void device_destory(Device* device)
@@ -191,7 +203,7 @@ void device_destory(Device* device)
 
 	device->zBuf = nullptr;
 	device->frameBuf = nullptr;
-
+	device->shadowBuf = nullptr;
 }
 void initApp()
 {
@@ -214,10 +226,14 @@ void clearBuffer(Device& device)
 		fb[i] = black.Data();
 
 	float* zbuf = device.zBuf[0];
+	float* shadowBuf = device.shadowBuf[0];
 	nums = screen_w * screen_h;
 
 	for (int i = 0; i < nums; i++)
-		zbuf[i] = -FLT_MAX;
+	{
+		zbuf[i] = FLT_MAX;
+		shadowBuf[i] = FLT_MAX;
+	}
 
 }
 
@@ -278,19 +294,26 @@ void setAfricanHeadModel(Model&model)
 	model.setTexture(pf_AfricanHeadTexture);
 	model.setNormalTexture(pf_AfricanHeadNormalMap);
 	model.setSpecTexture(pf_AfricanHeadSpecTexture);
+	model.setTangentTextureName(pf_AfricanHeadTangentNormalTexture);
 	model.readObjFile(pf_AfricanHead);
 }
+void setCubeModel(Model& model)
+{
+	model.readObjFile(pf_cubeObj);
+}
+
 void setDiabloModel(Model& model)
 {
 	model.setTexture(pf_DiablTexture);
 	model.setNormalTexture(pf_DiabloNormalTexture);
 	model.setSpecTexture(pf_DiabloSpecTexture);
+	model.setTangentTextureName(pf_DiabloTangentNormalTexture);
 	model.readObjFile(pf_DiabloObj);
 }
 
 int main()
 {
-	TCHAR* title = _T("TinyRender - ")
+	const wchar_t* title = _T("TinyRender - ")
 		_T("Left/Right: rotation, Up/Down: forward/backward, Space: switch state");
 
 	if (screen_init(800, 600, title))
@@ -298,32 +321,40 @@ int main()
 
 	initApp();
 	Render render;
-	TextureShader gouraudShader;
+	FlatShader flatShader;
+	TextureShader textureShader;
 	NormalMapShader normalMapShader;
 	LightIntensityShader lightIntensityShader;
 	PhongShader phongShader;
+	TangentNormalShader tangentShader;
+	DepthShader depthShader;
+	ShadowShader shadowShader;
 	float angle = 4;
 	std::vector<Model> models(1);
-	Camera camera(Vec3f(1,1,4),Vec3f(0,0,0),Vec3f(0,1,0));
-	
+	Camera camera(Vec3f(1,1,4), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
+
+
 	TextureManager::LoadTexture(pf_AfricanHeadTexture);
 	TextureManager::LoadTexture(pf_AfricanHeadNormalMap);
 	TextureManager::LoadTexture(pf_AfricanHeadSpecTexture);
 	TextureManager::LoadTexture(pf_DiabloNormalTexture);
 	TextureManager::LoadTexture(pf_DiabloSpecTexture);
 	TextureManager::LoadTexture(pf_DiablTexture);
+	TextureManager::LoadTexture(pf_DiabloTangentNormalTexture);
+	TextureManager::LoadTexture(pf_AfricanHeadTangentNormalTexture);
 	
 	Vec4f pos = vec4f_SetPoint(camera.getPos());
 	gl_Device.light_Dir = { -1,-1,-1 };
 	gl_Device.light_Dir.normalize();
 	gl_Device.viewPortMat = getViewPortMat(gl_Device.screen_width, gl_Device.screen_height);//视口矩阵
-	gl_Device.shader = &gouraudShader;
+	gl_Device.shader = &shadowShader;
 
-	//setAfricanHeadModel(models[0]);
-	setDiabloModel(models[0]);
 
-	auto identityM = mat4x4_IdentityMat();
-	identityM[0][0]= 0;
+	setAfricanHeadModel(models[0]);
+	//setDiabloModel(models[0]);
+	//setCubeModel(models[0]);
+	
+
 	while (screen_exit == 0 && screen_keys[VK_ESCAPE] == 0) {
 
 		screen_dispatch();
@@ -335,9 +366,9 @@ int main()
 		//std::cout << angle << std::endl;
 		//pos = mat4x4_Mul_Vec4f(getRotationYMat(angleToRadians(angle)),pos);
 		//camera.setPos(pos);
-		
+		//gl_Device.light_Dir = pos;
 		//Mat4x4 rotation = getRotationYMat(angleToRadians(angle));
-
+		
 		//angle += 2;
 
 

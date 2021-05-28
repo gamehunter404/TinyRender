@@ -20,9 +20,11 @@ private:
 	std::vector<Vec3f> _uvs;//顶点uv
 	std::vector<std::vector<Vertex>> _faces;//一个三角面
 	std::vector<Vec3f> _vns;//顶点法线
+
 	std::string _texName;
 	std::string _normalTexame;
 	std::string _specTexName;
+	std::string _tangentTexName;
 
 	Vec3f _scale = Vec3f(1,1,1);
 	Vec3f _rotation;
@@ -58,10 +60,12 @@ public:
 	std::string getTextureName() const;
 	std::string getNormalTextureName() const;
 	std::string getSpecTextureName()const;
+	std::string getTangentTextureName() const;
 
 	void readObjFile(const char* filename);
 	void setTexture(const std::string& texture_);
 	void setNormalTexture(const std::string& name);
+	void setTangentTextureName(const std::string&name);
 	void setSpecTexture(const std::string&name);
 };
 

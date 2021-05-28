@@ -30,6 +30,11 @@ void projVec(const Vec4f& res, Vec3f* tar)
 	tar->z = res.z;
 }
 
+Vec2Int projVec(const Vec4f& res)
+{
+	return Vec2Int(res.x,res.y);
+}
+
 float flt_Clamp(float v, float min, float max)
 {
 	if (v < min) v = min;
@@ -45,6 +50,12 @@ float flt_baryInterpolation(float a, float b, float c, const Vec3f& bary)
 float angleToRadians(float angle)
 {
 	return angle*PI/180;
+}
+
+void flt_Printf(const char* name, float val)
+{
+	printf("%s : \n",name);
+	printf("%12f\n",val);
 }
 
 Vec2f vec2f_Add(const Vec2f& a,const Vec2f& b)
@@ -130,6 +141,12 @@ Vec3f vec3f_Normalize(const Vec3f& a)
 	return Vec3f(a.x/mag,a.y/mag,a.z/mag);
 }
 
+void vec3f_Printf(const char* name, const Vec3f& v)
+{
+	printf("Vec3f %s :\n",name);
+	printf(" %12f, %12f, %12f\n",v.x,v.y,v.z);
+}
+
 Vec3f mul_Point(const Vec3f& v, const Mat4x4& mt)
 {
 	
@@ -163,12 +180,54 @@ Vec4f mat4x4_Mul_Vec4f(const Mat4x4& mat, const Vec4f& v)
 				 mat[3][0] * v.x + mat[3][1] * v.y + mat[3][2] * v.z + mat[3][3] * v.w);
 }
 
+void vec4f_Printf(const char* name, const Vec4f& v)
+{
+	printf("Vec4f %s :\n", name);
+	printf(" %12f, %12f, %12f, %12f\n", v.x, v.y, v.z,v.w);
+}
+
 Mat3x3 mat3x3_Identity()
 {
 	return Mat3x3
 		(1, 0, 0,
 		0, 1, 0,
 		0, 0, 1);
+}
+
+Mat3x3 mat3x3_Mul(const Mat3x3& a, const Mat3x3& b)
+{
+	Mat3x3 res;
+	float tmp[3];
+
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			tmp[j] = a[i][0]*b[0][j]+
+				a[i][1]*b[1][j]+a[i][2]*b[2][j];
+		}
+
+		res[i][0] = tmp[0];
+		res[i][1] = tmp[1];
+		res[i][2] = tmp[2];
+
+	}
+
+	return res;
+}
+
+Mat3x3 mat3x3_MakeCol(const Vec3f& c0, const Vec3f& c1, const Vec3f& c2)
+{
+	return Mat3x3(c0.x, c1.x, c2.x,
+				c0.y, c1.y, c2.y,
+				c0.z, c1.z, c2.z);
+}
+
+Mat3x3 mat3x3_MakeRow(const Vec3f& r0, const Vec3f& r1, const Vec3f& r2)
+{
+	return Mat3x3(r0.x, r0.y, r0.z,
+				r1.x, r1.y, r1.z,
+				r2.x, r2.y, r2.z);
 }
 
 float mat3x3_Det(const Mat3x3& m)
@@ -181,6 +240,67 @@ float mat3x3_Det(const Mat3x3& m)
 
 	return det;
 }
+
+Mat3x3 mat3x3_Inverse(const Mat3x3& m)
+{
+	Mat3x3 res = mat3x3_Adjoint(m);
+	float det = 0;
+
+	for (int j = 0; j < 3; j++)
+		det += m[0][j] * res[0][j];
+
+	res.transpose();
+	res.mult(1.0f/(det+kError));
+	return res;
+}
+
+Mat3x3 mat3x3_Adjoint(const Mat3x3& m)
+{
+	Mat3x3 res;
+
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			res[i][j] = mat3x3_Cofactor(m,i,j);
+		}
+	}
+
+	return res;
+}
+
+float mat3x3_Cofactor(const Mat3x3& m, int row, int col)
+{
+	float tmp[2][2];
+	float sig = (row + col) % 2 == 0 ? 1 : -1;
+	int r = 0, c = 0;
+
+	for (int i = 0; i < 3; i++)
+	{
+		if (i == row) 
+			continue;
+
+		for (int j = 0,c = 0; j < 3; j++)
+		{
+			if (j == col)
+				continue;
+
+			tmp[r][c] = m[i][j];
+			c++;
+		}
+		r++;
+	}
+
+	return sig*(tmp[0][0]*tmp[1][1] - tmp[0][1]*tmp[1][0]);
+}
+
+Vec3f mat3x3_Mul_Vec3f(const Mat3x3& m, const Vec3f& v)
+{
+	return Vec3f(m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z,
+				 m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z,
+				 m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z);
+}
+
 
 Mat4x4 mat4x4_newByRow(const Vec3f& r1, const Vec3f& r2, const Vec3f& r3)
 {
@@ -251,6 +371,21 @@ Mat4x4 mat4x4_Inverse(const Mat4x4& m)
 	res.mult(1.0f/(det+kError));
 
 	return res;
+}
+
+void mat4x4_Printf(const char* name, const Mat4x4& m)
+{
+	printf("%s = \n",name);
+
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			printf("    %12f",m[i][j]);
+		}
+
+		printf("\n");
+	}
 }
 
 float mat4x4_Det(const Mat4x4& m)
@@ -420,7 +555,7 @@ Mat4x4 getViewMat( Vec3f pos,  Vec3f target,  Vec3f up)
 
 	Vec3f right = vec3f_Cross(up, to);
 	up = vec3f_Cross(to, right);
-
+	up.normalize();
 	/*Mat4x4 res = mat4x4_IdentityMat();
 	Mat4x4 mat = mat4x4_newByRow(right, up, to);
 	Mat4x4 tran = getTranslateMat(-pos);
@@ -457,10 +592,14 @@ Mat4x4 getProjectionMat(const Device& device)
 
 Mat4x4 getPerspectiiveMat(float n, float f)
 {
-	return Mat4x4(-std::abs(n),0,0,0,
-				   0,-std::abs(n),0,0,
-				   0,0,-(f + n),-f*n,
-				   0,0,1,0);
+
+	n = std::abs(n);
+	f = std::abs(f);
+
+	return Mat4x4(n,0,0,0,
+				   0,n,0,0,
+				   0,0,f + n,f*n,
+				   0,0,-1,0);
 }
 
 Mat4x4 getOrthogonalMat(const Vec4f& canonicalSize, float n, float f)
@@ -470,9 +609,12 @@ Mat4x4 getOrthogonalMat(const Vec4f& canonicalSize, float n, float f)
 	const float& b = canonicalSize.z;
 	const float& t = canonicalSize.w;
 
-	return Mat4x4(2/(r-l),0,0,(r+l)/(l-r),
-					0,2/(t-b),0,(t+b)/(b-t),
-					0,0,-2/(n-f),(f+n)/(f-n),
+	n = std::abs(n);
+	f = std::abs(f);
+
+	return Mat4x4(2/(r-l),0,0,-(r+l)/(r - l),
+					0,2/(t-b),0,-(t+b)/(t - b),
+					0,0,-2/(f- n),-(f+n)/(f-n),
 					0,0,0,1);
 }
 
@@ -480,14 +622,34 @@ Mat4x4 getViewPortMat(float nx, float ny)
 {
 	return Mat4x4(nx/2,0,0,nx/2,
 				  0,-ny/2,0,ny/2,
-				  0,0,1,0,
+				  0,0,1.0f/2.0f,1.0f/2.0f,
 				  0,0,0,1);
 }
 
+Vec4f perspectiveDivision(const Vec4f&v)
+{
+	return Vec4f(v.x/v.w,v.y/v.w,v.z/v.w,v.w);
+}
 
-Vec3f Vec3f::operator-()
+void perspectiveDivision(Vec4f* v)
+{
+	float div = 1.0f / (v->w+kError);
+
+	v->x *= div;
+	v->y *= div;
+	v->z *= div;
+	v->w = 1.0f;
+}
+
+
+Vec3f Vec3f::operator-() const
 {
 	return Vec3f(-x,-y,-z);
+}
+
+Vec3f Vec3f::operator*(float val) const
+{
+	return Vec3f(x*val,y*val,z*val);
 }
 
 void Vec3f::normalize()
@@ -533,6 +695,25 @@ Mat4x4::Mat4x4()
 {
 	memset(_data,0,sizeof(float)*16);
 	_data[0][0] = _data[1][1] = _data[2][2] = _data[3][3] = 1;
+}
+
+Mat4x4 Mat4x4::operator*(const Mat4x4& mat)
+{
+	Mat4x4 res;
+
+	for (int i = 0; i < 4; i++)
+	{
+
+		for (int j = 0; j < 4; j++)
+		{
+			res[i][j] = _data[i][0] * mat[0][j] +
+				_data[i][1] * mat[1][j] +
+				_data[i][2] * mat[2][j] +
+				_data[i][3] * mat[3][j];
+		}
+	}
+
+	return res;
 }
 
 void Mat4x4::mult(const Mat4x4& a)

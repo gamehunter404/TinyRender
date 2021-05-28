@@ -24,7 +24,8 @@ public:
 	Vec3f() :x(0), y(0), z(0) {}
 	Vec3f(float _x, float _y, float _z) :x(_x), y(_y), z(_z) {}
 
-	Vec3f operator-();
+	Vec3f operator-() const;
+	Vec3f operator*(float val) const;
 	void normalize();
 	void mult(float val);
 	void sub(const Vec3f v);
@@ -65,7 +66,6 @@ private:
 	float _data[3][3];
 };
 
-
 struct Mat4x4
 {
 public:
@@ -75,6 +75,7 @@ public:
 		float m30, float m31, float m32, float m33);
 	Mat4x4();
 
+	Mat4x4 operator*(const Mat4x4&mat);
 	void mult(const Mat4x4&a);
 	void mult(float val);
 	void transpose();
@@ -102,7 +103,7 @@ void projVec(const Vec4f &res,Vec3f*tar);
 float flt_Clamp(float v, float min, float max);
 float flt_baryInterpolation(float a,float b,float c,const Vec3f&bary);
 float angleToRadians(float angle);
-
+void flt_Printf(const char*name,float val);
 
 /*vector2 relate function*/
 Vec2f vec2f_Add(const Vec2f&a,const Vec2f&b);
@@ -126,16 +127,25 @@ Vec3f vec3f_baryInterpolation(const Vec3f&a,const Vec3f&b,const Vec3f&c,const Ve
 Vec3f vec3f_Reflect(const Vec3f& nor,const Vec3f& inDir);
 float vec3f_Dot(const Vec3f&a,const Vec3f&b);
 Vec3f vec3f_Normalize(const Vec3f&a);
-
+void vec3f_Printf(const char*name,const Vec3f&v);
 
 /*vector4 relate function*/
 Vec4f vec4f_SetPoint(const Vec3f& a);
 Vec4f vec4f_SetVec(const Vec3f& a);
 Vec4f mat4x4_Mul_Vec4f(const Mat4x4&mat,const Vec4f& v);
+void vec4f_Printf(const char*name,const Vec4f&v);
+
 
 /*mat3x3 relate funciton*/
 Mat3x3 mat3x3_Identity();
+Mat3x3 mat3x3_Mul(const Mat3x3&a,const Mat3x3&b);
+Mat3x3 mat3x3_MakeCol(const Vec3f& c0,const Vec3f& c1,const Vec3f&c2);
+Mat3x3 mat3x3_MakeRow(const Vec3f&r0,const Vec3f&r1,const Vec3f&r2);
 float mat3x3_Det(const Mat3x3&m);
+Mat3x3 mat3x3_Inverse(const Mat3x3&m);
+Mat3x3 mat3x3_Adjoint(const Mat3x3& m);
+float mat3x3_Cofactor(const Mat3x3& m, int row, int col);
+Vec3f mat3x3_Mul_Vec3f(const Mat3x3& m, const Vec3f& v);
 
 //mat4x4 relate function
 Mat4x4 mat4x4_newByRow(const Vec3f&r1, const Vec3f& r2, const Vec3f& r3);
@@ -144,6 +154,7 @@ Mat4x4 mat4x4_Mul(const Mat4x4&a,const Mat4x4&b);
 Mat4x4 mat4x4_Transpose(const Mat4x4& m);
 Mat4x4 mat4x4_IdentityMat();
 Mat4x4 mat4x4_Inverse(const Mat4x4&m);
+void mat4x4_Printf(const char*name,const Mat4x4&m);
 float mat4x4_Det(const Mat4x4&m);
 Mat4x4 mat4x4_Adjoint(const Mat4x4&m);
 float mat4x4_Cofactor(const Mat4x4&m,int row,int col);
@@ -166,7 +177,8 @@ Mat4x4 getProjectionMat(const Device&device);
 Mat4x4 getPerspectiiveMat(float near,float far);
 Mat4x4 getOrthogonalMat(const Vec4f& canonicalSize,float near,float far);
 Mat4x4 getViewPortMat(float nx,float ny);
-
+Vec4f perspectiveDivision(const Vec4f&v);
+void perspectiveDivision(Vec4f*v);
 
 struct Color
 {
