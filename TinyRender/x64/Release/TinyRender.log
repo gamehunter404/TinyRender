@@ -1,0 +1,13 @@
+﻿  main.cpp
+D:\Github\TinyRender\TinyRender\tgaImage.h(62,59): warning C4244: “=”: 从“float”转换到“unsigned char”，可能丢失数据
+D:\Github\TinyRender\TinyRender\Model.h(17,13): warning C4099: “Model”: 类型名称以前使用“struct”现在使用的是“class”
+D:\Github\TinyRender\TinyRender\Model.h(17): message : 参见“Model”的声明
+D:\Github\TinyRender\TinyRender\main.cpp(71,9): warning C4838: 从“int”转换到“DWORD”需要收缩转换
+D:\Github\TinyRender\TinyRender\main.cpp(286,42): warning C4244: “参数”: 从“float”转换到“unsigned char”，可能丢失数据
+D:\Github\TinyRender\TinyRender\main.cpp(349,74): warning C4244: “参数”: 从“int”转换到“float”，可能丢失数据
+D:\Github\TinyRender\TinyRender\main.cpp(349,50): warning C4244: “参数”: 从“int”转换到“float”，可能丢失数据
+  正在生成代码
+  Previous IPDB not found, fall back to full compilation.
+  All 704 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  已完成代码的生成
+  TinyRender.vcxproj -> D:\Github\TinyRender\TinyRender\x64\Release\TinyRender.exe
