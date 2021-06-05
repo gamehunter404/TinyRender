@@ -146,7 +146,7 @@
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Maths.cpp" />
-    <ClCompile Include="Model.cpp" />
+    <ClCompile Include="ObjModel.cpp" />
     <ClCompile Include="Render.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="TextureManager.cpp" />
@@ -156,7 +156,7 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="Maths.h" />
-    <ClInclude Include="Model.h" />
+    <ClInclude Include="ObjModel.h" />
     <ClInclude Include="Render.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="TextureManager.h" />

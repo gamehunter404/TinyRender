@@ -4,7 +4,7 @@
 struct Color;
 struct Vec3f;
 struct Vec4f;
-struct Model;
+struct ObjModel;
 struct Device;
 class Camera;
 struct Device;
@@ -18,14 +18,14 @@ public:
 	void DrawLine(int x0,int y0,int x1,int y1, const Color& color);
 	void DrawTriangle(Vec3f* w, Vec2Int* v, Color&color);
 	void DrawTriangle(Vec3f* w, Vec2Int* v, Vec3f* uvs);
-	void renderWithShader(const Camera& camera, std::vector<Model>& models);
-	void renderModel(const Camera& camera,std::vector<Model>&models);
+	void renderWithShader(const Camera& camera, std::vector<ObjModel>& models);
+	void renderModel(const Camera& camera,std::vector<ObjModel>&models);
 
 private:
-	void renderShadow(Model& model,Device&device);
+	void renderShadow(ObjModel& model,Device&device);
 	void drawTriByEdgeEquation(Vec3f* w, Vec2Int* v,const Color&color);
 	void drawTriByEdgeEquation(Vec3f* w, Vec2Int* v,Vec3f*uvs);
-	void drawTriByEdgeEquation(Vec4f* w, Vec4f* v, Vec3f* uvs,Vec3f*vns,const Model&model);
+	void drawTriByEdgeEquation(Vec4f* w, Vec4f* v, Vec3f* uvs,Vec3f*vns,const ObjModel&model);
 	void rasterizedTriangle(Vec4f*w,IShader&shader);
 	void drawTriBySweeping(Vec3f* w, Vec2Int* v,const Color&color);
 	Vec3f interpolateUVCoord(Vec3f*uv,const Vec3f& vuw);

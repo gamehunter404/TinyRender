@@ -3,13 +3,13 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
-#include "model.h"
+#include "ObjModel.h"
 
-Model::Model()
+ObjModel::ObjModel()
 {
 }
 
-Model::Model(const char* filename) : _verts(), _faces() {
+ObjModel::ObjModel(const char* filename) : _verts(), _faces() {
     std::ifstream in;
     in.open(filename, std::ifstream::in);
     if (in.fail()) return;
@@ -55,88 +55,88 @@ Model::Model(const char* filename) : _verts(), _faces() {
     std::cerr << "# v# " << _verts.size() << " f# " << _faces.size() << std::endl;
 }
 
-Model::~Model() {
+ObjModel::~ObjModel() {
 }
 
-int Model::nverts() {
+int ObjModel::nverts() {
     return (int)_verts.size();
 }
 
-int Model::nfaces() {
+int ObjModel::nfaces() {
     return (int)_faces.size();
 }
 
-int Model::nuvs()
+int ObjModel::nuvs()
 {
     return _uvs.size();
 }
 
-int Model::nvns()
+int ObjModel::nvns()
 {
     return _vns.size();
 }
 
-std::vector<Vertex> Model::face(int idx) {
+std::vector<Vertex> ObjModel::face(int idx) {
     return _faces[idx];
 }
 
-void Model::translate(float x, float y, float z)
+void ObjModel::translate(float x, float y, float z)
 {
     _translate.x = x;
     _translate.y = y;
     _translate.z = z;
 }
 
-void Model::scale(float x, float y, float z)
+void ObjModel::scale(float x, float y, float z)
 {
     _scale.x = x;
     _scale.y = y;
     _scale.z = z;
 }
 
-void Model::rotation(float x, float y, float z)
+void ObjModel::rotation(float x, float y, float z)
 {
     _rotation.x = x;
     _rotation.y = y;
     _rotation.z = z;
 }
 
-Vec3f Model::getTranslate() const
+Vec3f ObjModel::getTranslate() const
 {
     return _translate;
 }
 
-Vec3f Model::getScale() const
+Vec3f ObjModel::getScale() const
 {
     return _scale;
 }
 
-Vec3f Model::getRotation() const
+Vec3f ObjModel::getRotation() const
 {
     return _rotation;
 }
 
-std::string Model::getTextureName() const
+std::string ObjModel::getTextureName() const
 {
     return _texName;
 }
 
-std::string Model::getNormalTextureName() const
+std::string ObjModel::getNormalTextureName() const
 {
     return _normalTexame;
 }
 
-std::string Model::getSpecTextureName() const
+std::string ObjModel::getSpecTextureName() const
 {
     return _specTexName;
 }
 
-std::string Model::getTangentTextureName() const
+std::string ObjModel::getTangentTextureName() const
 {
     return _tangentTexName;
 }
 
-void Model::readObjFile(const char* filename)
+void ObjModel::readObjFile(const char* filename)
 {
     _verts.clear();
     _faces.clear();
@@ -186,53 +186,53 @@ void Model::readObjFile(const char* filename)
 }
 
 
-void Model::setTexture(const std::string& texname)
+void ObjModel::setTexture(const std::string& texname)
 {
     _texName = texname;
 }
 
-void Model::setNormalTexture(const std::string& name)
+void ObjModel::setNormalTexture(const std::string& name)
 {
     _normalTexame = name;
 }
 
-void Model::setTangentTextureName(const std::string& name)
+void ObjModel::setTangentTextureName(const std::string& name)
 {
     _tangentTexName = name;
 }
 
-void Model::setSpecTexture(const std::string& name)
+void ObjModel::setSpecTexture(const std::string& name)
 {
     _specTexName = name;
 }
 
-Vec3f Model::vert(int i) {
+Vec3f ObjModel::vert(int i) {
     return _verts[i];
 }
 
-Vec3f Model::vert(int iface, int nthVert)
+Vec3f ObjModel::vert(int iface, int nthVert)
 {
     auto& face = _faces[iface];
     return _verts[face[nthVert].verIndex];
 }
 
-Vec3f Model::uvs(int i)
+Vec3f ObjModel::uvs(int i)
 {
     return _uvs[i];
 }
 
-Vec3f Model::uvs(int iface, int nth)
+Vec3f ObjModel::uvs(int iface, int nth)
 {
     Vertex& indices = _faces[iface].at(nth);
     return _uvs[indices.vtIndex];
 }
 
-Vec3f Model::vns(int i)
+Vec3f ObjModel::vns(int i)
 {
     return _vns[i];
 }
 
-Vec3f Model::vns(int iface, int nth)
+Vec3f ObjModel::vns(int iface, int nth)
 {
     Vertex& indices = _faces[iface].at(nth);
     return _vns[indices.vnIndex];

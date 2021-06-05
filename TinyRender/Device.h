@@ -4,7 +4,7 @@
 #include"tgaImage.h"
 #include"Maths.h"
 #include"Shader.h"
-#include"Model.h"
+#include"ObjModel.h"
 struct Mat4x4;
 struct Vec3f;
 
@@ -60,7 +60,7 @@ public:
 	Mat4x4 inverseModelMat;
 	Mat4x4 lightSpaceMat;
 
-	Model* model = nullptr;
+	ObjModel* model = nullptr;
 	IShader* shader = nullptr;
 	TGAImage* texture = nullptr;
 	TGAImage* normalTexture = nullptr;// normal Map
@@ -71,7 +71,7 @@ public:
 	float varying_PixelDepth;
 
 	bool depthTest = true;
-	bool generateShadowMap = true;
+	bool generateShadowMap = false;
 	FaceCulling faceCulling = FaceCulling::FACECULLING_BACK;
 	ProjectionType projectionType = ProjectionType::PROJECTION_PERSPECTIVE;//投影类型
 	TriangleFillAlgorithm triangleFillSetting = TriangleFillAlgorithm::TRIFILL_EDGEEQUATION;

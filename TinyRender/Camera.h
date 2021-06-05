@@ -13,10 +13,10 @@ public:
 	void setTarget(Vec3f target);
 	void setUp(Vec3f up);
 
-	Vec3f getPos() const;
-	Vec3f getTarget() const;
-	Vec3f getUp() const;
-	Vec3f lookDir() const;
+	Vec3f get_CameraPos() const;
+	Vec3f get_CameraTarget() const;
+	Vec3f get_UpDir() const;
+	Vec3f get_LookDir() const;
 
 private:
 	Vec3f _pos;

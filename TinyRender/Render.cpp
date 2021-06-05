@@ -1,6 +1,6 @@
 #include"Render.h"
 #include"Device.h"
-#include"Model.h"
+#include"ObjModel.h"
 #include"Maths.h"
 #include"Camera.h"
 #include"TextureManager.h"
@@ -90,7 +90,7 @@ void Render::DrawTriangle(Vec3f* w, Vec2Int* v, Vec3f* uvs)
 	}
 
 }
-void Render::renderWithShader(const Camera& camera, std::vector<Model>& models)
+void Render::renderWithShader(const Camera& camera, std::vector<ObjModel>& models)
 {
 	if (gl_Device.shader == nullptr) return;
 
@@ -98,14 +98,14 @@ void Render::renderWithShader(const Camera& camera, std::vector<Model>& models)
 	Vec4f w[3];
 	
 
-	gl_Device.varying_eyePos = camera.getPos();
-	gl_Device.viewMat = getViewMat(camera.getPos(), camera.getTarget(), camera.getUp()); 
+	gl_Device.varying_eyePos = camera.get_CameraPos();
+	gl_Device.viewMat = getViewMat(camera.get_CameraPos(), camera.get_CameraTarget(), camera.get_UpDir()); 
 	gl_Device.uniform_projectionMat = mat4x4_Mul(getProjectionMat(gl_Device), gl_Device.viewMat); 
 	gl_Device.mvpInvMat = mat4x4_Mul(gl_Device.viewPortMat, gl_Device.uniform_projectionMat);
 
 	for (int n = 0; n < models.size(); n++)
 	{
-		Model& model = models[n];
+		ObjModel& model = models[n];
 		gl_Device.modelMat = getModelMat(model.getScale(), model.getRotation(), model.getTranslate());
 		gl_Device.mvpInvMat = mat4x4_Mul(gl_Device.mvpInvMat,gl_Device.modelMat); //gl_Device.mvpInvMat * gl_Device.modelMat;
 		gl_Device.mvpInvMat = mat4x4_Inverse(gl_Device.mvpInvMat);
@@ -149,9 +149,9 @@ void Render::renderWithShader(const Camera& camera, std::vector<Model>& models)
 	gl_Device.normalTexture = nullptr;
 	gl_Device.texture = nullptr;
 }
-void Render::renderModel(const Camera& camera,std::vector<Model>& models)
+void Render::renderModel(const Camera& camera,std::vector<ObjModel>& models)
 {
-	gl_Device.viewMat = getViewMat(camera.getPos(),camera.getTarget(),camera.getUp()); 
+	gl_Device.viewMat = getViewMat(camera.get_CameraPos(),camera.get_CameraTarget(),camera.get_UpDir()); 
 	gl_Device.uniform_projectionMat = mat4x4_Mul(getProjectionMat(gl_Device), gl_Device.viewMat); 
 
 	Vec4f w[3];
@@ -161,7 +161,7 @@ void Render::renderModel(const Camera& camera,std::vector<Model>& models)
 
 	for (int n = 0; n < models.size(); n++)
 	{
-		Model& model = models[n];
+		ObjModel& model = models[n];
 		gl_Device.modelMat = getModelMat(model.getScale(),model.getRotation(),model.getTranslate());
 		gl_Device.inverseModelMat = getInverseModelMat(model.getScale(), model.getRotation(), model.getTranslate());
 		gl_Device.texture = TextureManager::getTexture(model.getTextureName().c_str());
@@ -218,7 +218,7 @@ void Render::renderModel(const Camera& camera,std::vector<Model>& models)
 	
 	gl_Device.texture = nullptr;
 }
-void Render::renderShadow(Model& model,Device& device)
+void Render::renderShadow(ObjModel& model,Device& device)
 {
 	if (device.shadowBuf == nullptr) return;
 	
@@ -382,7 +382,7 @@ void Render::drawTriByEdgeEquation(Vec3f* w, Vec2Int* v, Vec3f* uvs)
 		}
 	}
 }
-void Render::drawTriByEdgeEquation(Vec4f* w, Vec4f* v, Vec3f* uvs,Vec3f*vns,const Model&model)
+void Render::drawTriByEdgeEquation(Vec4f* w, Vec4f* v, Vec3f* uvs,Vec3f*vns,const ObjModel&model)
 {
 
 	Vec2Int v0 = Vec2Int(v[0].x, v[0].y);

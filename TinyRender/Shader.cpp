@@ -5,7 +5,7 @@
 
 Vec4f TextureShader::vertex(int iface, int nthVert)
 {
-	Model& model = *(gl_Device.model);
+	ObjModel& model = *(gl_Device.model);
 	Vec4f v = vec4f_SetPoint(model.vert(iface, nthVert));
 	v = mat4x4_Mul_Vec4f(gl_Device.modelMat,v);// to world space
 	v = mat4x4_Mul_Vec4f(gl_Device.uniform_projectionMat,v); // to camera space, and then to cvv
@@ -45,7 +45,7 @@ LightIntensityShader::~LightIntensityShader()
 }
 Vec4f LightIntensityShader::vertex(int iface, int nthVert)
 {
-	Model& model = *(gl_Device.model);
+	ObjModel& model = *(gl_Device.model);
 	Vec4f v = vec4f_SetPoint(model.vert(iface, nthVert));
 	v = mat4x4_Mul_Vec4f(gl_Device.modelMat, v);// to world space
 	v = mat4x4_Mul_Vec4f(gl_Device.uniform_projectionMat, v); // to camera space, and then to cvv
@@ -83,7 +83,7 @@ NormalMapShader::~NormalMapShader()
 }
 Vec4f NormalMapShader::vertex(int iface, int nthVert)
 {
-	Model& model = *(gl_Device.model);
+	ObjModel& model = *(gl_Device.model);
 	Vec4f v = vec4f_SetPoint(model.vert(iface, nthVert));
 	v = mat4x4_Mul_Vec4f(gl_Device.modelMat, v);// to world space
 	v = mat4x4_Mul_Vec4f(gl_Device.uniform_projectionMat, v); // to camera space, and then to cvv
@@ -115,7 +115,7 @@ PhongShader::~PhongShader()
 }
 Vec4f PhongShader::vertex(int iface, int nthVert)
 {
-	Model& model = *(gl_Device.model);
+	ObjModel& model = *(gl_Device.model);
 	Vec4f v = vec4f_SetPoint(model.vert(iface, nthVert));
 	gl_Device.varying_w[nthVert] = v = mat4x4_Mul_Vec4f(gl_Device.modelMat, v);// to world space
 	v = mat4x4_Mul_Vec4f(gl_Device.uniform_projectionMat, v); // to camera space, and then to cvv
@@ -163,7 +163,7 @@ TangentNormalShader::~TangentNormalShader()
 
 Vec4f TangentNormalShader::vertex(int iface, int nthVert)
 {
-	Model& model = *(gl_Device.model);
+	ObjModel& model = *(gl_Device.model);
 	Vec4f v = vec4f_SetPoint(model.vert(iface, nthVert));
 	gl_Device.varying_w[nthVert] = v = mat4x4_Mul_Vec4f(gl_Device.modelMat, v);// to world space
 	v = mat4x4_Mul_Vec4f(gl_Device.uniform_projectionMat, v); // to camera space, and then to cvv
@@ -251,7 +251,7 @@ DepthShader::~DepthShader()
 
 Vec4f DepthShader::vertex(int iface, int nthVert)
 {
-	Model& model = *(gl_Device.model);
+	ObjModel& model = *(gl_Device.model);
 	Vec4f v = vec4f_SetPoint(model.vert(iface, nthVert));
 	v = mat4x4_Mul_Vec4f(gl_Device.modelMat, v);// to world space
 	v = mat4x4_Mul_Vec4f(gl_Device.uniform_projectionMat, v); // to camera space, and then to cvv
@@ -289,7 +289,7 @@ ShadowShader::~ShadowShader()
 Vec4f ShadowShader::vertex(int iface, int nthVert)
 {
 
-	Model& model = *(gl_Device.model);
+	ObjModel& model = *(gl_Device.model);
 	Vec4f v = vec4f_SetPoint(model.vert(iface, nthVert));
 	v = mat4x4_Mul_Vec4f(gl_Device.modelMat, v);// to world space
 	gl_Device.varying_w[nthVert] = v;
@@ -359,7 +359,7 @@ float ShadowShader::getShadowFactor(const Vec3f& nor, const Vec3f& lightDir, con
 
 Vec4f FlatShader::vertex(int iface, int nthVert)
 {
-	Model& model = *(gl_Device.model);
+	ObjModel& model = *(gl_Device.model);
 	Vec4f v = vec4f_SetPoint(model.vert(iface, nthVert));
 	gl_Device.varying_w[nthVert] = v;
 	v = mat4x4_Mul_Vec4f(gl_Device.modelMat, v);// to world space

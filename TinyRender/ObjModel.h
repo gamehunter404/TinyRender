@@ -1,5 +1,5 @@
-#ifndef __MODEL_H__
-#define __MODEL_H__
+#ifndef __OBJMODEL_H__
+#define __OBJMODEL_H__
 
 #include"Maths.h"
 #include"tgaImage.h"
@@ -14,7 +14,7 @@ struct Vertex
 	int vnIndex;
 };
 
-class Model {
+class ObjModel {
 private:
 	std::vector<Vec3f> _verts;//¶¥µã×ø±ê
 	std::vector<Vec3f> _uvs;//¶¥µãuv
@@ -34,9 +34,9 @@ private:
 
 
 public:
-	Model();
-	Model(const char* filename);
-	~Model();
+	ObjModel();
+	ObjModel(const char* filename);
+	~ObjModel();
 	int nverts();
 	int nfaces();
 	int nuvs();

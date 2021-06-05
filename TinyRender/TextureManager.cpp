@@ -1,4 +1,4 @@
-#include"TextureManager.h"
+ï»¿#include"TextureManager.h"
 #include"tgaImage.h"
 #include<iostream>
 
@@ -10,7 +10,6 @@ void TextureManager::initManager()
 	{
 		_instance = new TextureManager();
 
-		//TODO ³õÊ¼»¯Ò»¸öÄ¬ÈÏµÄÌùÍ¼
 		TGAImage* defaultTexture = new TGAImage(800, 600, 4);
 		TGAColor color(255, 0, 0, 255);
 
@@ -37,7 +36,7 @@ void TextureManager::destoryManager()
 
 TGAImage* TextureManager::getTexture(const char* name)
 {
-	if (_instance == nullptr) 
+	if (_instance == nullptr)
 		return nullptr;
 
 	TGAImage* res = nullptr;
@@ -54,7 +53,7 @@ TGAImage* TextureManager::getTexture(const char* name)
 	return res;
 }
 
-void TextureManager::LoadTexture(const char* filename)
+void TextureManager::LoadTexture(const char* filepath, const char* filename)
 {
 	if (filename == nullptr || _instance == nullptr)
 		return;
@@ -67,16 +66,16 @@ void TextureManager::LoadTexture(const char* filename)
 
 	TGAImage* tex = new TGAImage();
 
-	if (tex->read_tga_file(filename)) {
+	std::cerr << std::endl << "----------------------------------------------------------" << std::endl;
+
+	if (tex->read_tga_file(filepath)) {
 
 		_instance->_textures[filename] = tex;
-		std::cerr <<std::endl <<"----------------------------------------------------------"<<std::endl;
-		std::cerr << "loaded texture '"<<filename<<" ' # w = "<<tex->get_width()<<",h = "<<tex->get_height()<<std::endl;
-		std::cerr <<"----------------------------------------------------------" << std::endl;
+		std::cerr << "loaded texture '" << filename << " ' # w = " << tex->get_width() << ",h = " << tex->get_height() << std::endl;
+		std::cerr << "----------------------------------------------------------" << std::endl;
 
 	}
 	else {
-		std::cerr << std::endl << "----------------------------------------------------------" << std::endl;
 		std::cerr << "failed to load texture '" << filename << " '" << std::endl;
 		std::cerr << "----------------------------------------------------------" << std::endl;
 	}
@@ -90,7 +89,7 @@ TextureManager::~TextureManager()
 	{
 		TGAImage* ptr = n._Ptr->_Myval.second;
 
-		if(ptr!=nullptr)
+		if (ptr != nullptr)
 			delete ptr;
 	}
 }

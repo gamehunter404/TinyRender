@@ -27,22 +27,22 @@ void Camera::setUp(Vec3f up)
 	_up = up;
 }
 
-Vec3f Camera::getPos() const
+Vec3f Camera::get_CameraPos() const
 {
 	return _pos;
 }
 
-Vec3f Camera::getTarget() const
+Vec3f Camera::get_CameraTarget() const
 {
 	return _target;
 }
 
-Vec3f Camera::getUp() const
+Vec3f Camera::get_UpDir() const
 {
 	return _up;
 }
 
-Vec3f Camera::lookDir() const
+Vec3f Camera::get_LookDir() const
 {
 	return vec3f_Normalize(vec3f_Sub(_target, _pos));
 }

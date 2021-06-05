@@ -1,11 +1,12 @@
 #include<windows.h>
 #include <stdlib.h>
+#include<string>
 #include <math.h>
 #include <assert.h>
 #include <tchar.h>
 #include<iostream>
 #include"Render.h"
-#include"Model.h"
+#include"ObjModel.h"
 #include"Maths.h"
 #include<vector>
 #include"Device.h"
@@ -18,52 +19,51 @@
 #pragma comment(lib, "user32.lib")
 #endif
 
-
 int screen_w, screen_h, screen_exit = 0;
 int screen_mx = 0, screen_my = 0, screen_mb = 0;
-int screen_keys[512];	// 当前键盘按下状态
-static HWND screen_handle = NULL;		// 主窗口 HWND
-static HDC screen_dc = NULL;			// 配套的 HDC
-static HBITMAP screen_hb = NULL;		// DIB
-static HBITMAP screen_ob = NULL;		// 老的 BITMAP
-unsigned char* screen_fb = NULL;		// frame buffer
+int screen_keys[512];
+static HWND screen_handle = NULL;
+static HDC screen_dc = NULL;
+static HBITMAP screen_hb = NULL;
+static HBITMAP screen_ob = NULL;
+unsigned char* screen_fb = NULL;
 long screen_pitch = 0;
 
 Color red = Color(255, 0, 0, 255);
 Color green = Color(0, 255, 0, 255);
 Color blue = Color(0, 0, 255, 255);
 Color white = Color(255, 255, 255, 255);
-Color black = Color(0,0,0,0);
+Color black = Color(0, 0, 0, 0);
 
-const char* pf_TriangleObj = "Resources/triangle.obj";
-const char* pf_cubeObj = "Resources/cube.obj";
+const char* path_rootResourcePath = "Resources/";// resource root path
+const char* path_FrameBuffer = "Resources/frameBuffer.tga";
+const char* path_ShadowMap = "Resources/shadowMap.tga";
+const char* path_DepthBuffer = "Resources/depthBuffer.tga";
 
-const char* pf_AfricanHead = "Resources/african_head.obj";
-const char* pf_AfricanHeadTexture = "Resources/african_head_diffuse.tga";
-const char* pf_AfricanHeadNormalMap = "Resources/african_head_nm.tga";;
-const char* pf_AfricanHeadSpecTexture = "Resources/african_head_spec.tga";
-const char* pf_AfricanHeadTangentNormalTexture = "Resources/african_head_nm_tangent.tga";
+const char* folder_AfricanHead = "african_head";
+const char* folder_Box = "box";
+const char* folder_diablo3 = "diablo3";
+const char* folder_triangle = "triangle";
+const char* folder_helmet = "helmet";
+const char* folder_drone = "drone";
+const char* folder_floor = "floor";
 
-const char* pf_DiabloObj = "Resources/diablo3_pose.obj";
-const char* pf_DiablTexture = "Resources/diablo3_pose_diffuse.tga";
-const char* pf_DiabloNormalTexture = "Resources/diablo3_pose_nm.tga";
-const char* pf_DiabloSpecTexture = "Resources/diablo3_pose_spec.tga";
-const char* pf_DiabloTangentNormalTexture = "Resources/diablo3_pose_nm_tangent.tga";
+const char* suffix_NormalTex = "_nm.tga";
+const char* suffix_TangentNormalTex = "_nm_tangent.tga";
+const char* suffix_DiffuseTex = "_diffuse.tga";
+const char* suffix_SpecTex = "_spec.tga";
 
-const char* pf_OutputTexture = "Resources/withShadow.tga";
-
-int screen_init(int w, int h, const TCHAR* title);	// 屏幕初始化
-int screen_close(void);								// 关闭屏幕
-void screen_dispatch(void);							// 处理消息
-void screen_update(void);							// 显示 FrameBuffer
-void device_init(Device*device);
-void device_destory(Device*device);
+int screen_init(int w, int h, const wchar_t* title);
+int screen_close(void);
+void screen_dispatch(void);
+void screen_update(void);
+void device_init(Device* device);
+void device_destory(Device* device);
 
 // win32 event handler
 static LRESULT screen_events(HWND, UINT, WPARAM, LPARAM);
 
 
-// 初始化窗口并设置标题
 int screen_init(int w, int h, const wchar_t* title) {
 	WNDCLASS wc = { CS_BYTEALIGNCLIENT, (WNDPROC)screen_events, 0, 0, 0,
 		NULL, NULL, NULL, NULL, _T("SCREEN3.1415926") };
@@ -154,21 +154,21 @@ void device_init(Device* device)
 {
 	if (device == nullptr) return;
 
-	long long need = screen_w * screen_h * sizeof(float)*2 + screen_h * 3* sizeof(void*);
+	long long need = screen_w * screen_h * sizeof(float) * 2 + screen_h * 3 * sizeof(void*);
 	unsigned char* ptr = new unsigned char[need];
 
 	device->frameBuf = (unsigned int**)(ptr);
 	device->zBuf = (float**)(ptr + screen_h * sizeof(void*));
-	device->shadowBuf = (float**)(ptr + 2*screen_h*sizeof(void*));
+	device->shadowBuf = (float**)(ptr + 2 * screen_h * sizeof(void*));
 
 	ptr += sizeof(void*) * screen_h * 3;
-	unsigned char* shadowBufPtr = ptr + sizeof(float)*screen_h*screen_w;
+	unsigned char* shadowBufPtr = ptr + sizeof(float) * screen_h * screen_w;
 
 	for (int i = 0; i < screen_h; i++)
 	{
 		device->frameBuf[i] = (unsigned int*)(screen_fb + 4 * i * screen_w);
 		device->zBuf[i] = (float*)(ptr + sizeof(float) * screen_w * i);
-		device->shadowBuf[i] = (float*)(shadowBufPtr+sizeof(float)*screen_w*i);
+		device->shadowBuf[i] = (float*)(shadowBufPtr + sizeof(float) * screen_w * i);
 	}
 
 	device->screen_width = screen_w;
@@ -184,10 +184,10 @@ void device_init(Device* device)
 	else {
 		device->t = 1.5f;
 		device->b = -device->t;
-		device->r = device->screenRatio*device->t;
+		device->r = device->screenRatio * device->t;
 		device->l = -device->r;
 	}
-	
+
 
 }
 void device_destory(Device* device)
@@ -199,7 +199,6 @@ void device_destory(Device* device)
 		delete[] device->frameBuf;
 	}
 
-	//zBuf 不需要delete ，否咋会造成重复delete
 
 	device->zBuf = nullptr;
 	device->frameBuf = nullptr;
@@ -249,7 +248,7 @@ static LRESULT screen_events(HWND hWnd, UINT msg,
 }
 
 
-void renderToTgaFile(const char* filePath,Device&device)
+void renderToTgaFile(const char* filePath, Device& device)
 {
 	TGAImage image(device.screen_width, device.screen_height, 4);
 
@@ -259,9 +258,9 @@ void renderToTgaFile(const char* filePath,Device&device)
 		{
 			unsigned int color = device.frameBuf[y][x];//0xffffffff;
 			unsigned char r, g, b, a;
-			a = (0xff000000 & color)>>24;
-			r = (0x00ff0000 & color)>>16;
-			g = (0x0000ff00 & color)>>8;
+			a = (0xff000000 & color) >> 24;
+			r = (0x00ff0000 & color) >> 16;
+			g = (0x0000ff00 & color) >> 8;
 			b = 0x000000ff & color;
 			image.set(x, y, TGAColor(r, g, b, a));
 		}
@@ -270,7 +269,7 @@ void renderToTgaFile(const char* filePath,Device&device)
 	image.write_tga_file(filePath);
 
 }
-void renderDepthBuffer(Device&device)
+void renderDepthBuffer(Device& device)
 {
 	float* depthBuf = device.zBuf[0];
 	unsigned int* frameBuf = device.frameBuf[0];
@@ -280,36 +279,42 @@ void renderDepthBuffer(Device&device)
 
 	for (int i = 0; i < nums; i++)
 	{
-		if (std::abs(depthBuf[i]) <1.0f)
+		if (std::abs(depthBuf[i]) < 1.0f)
 		{
 
-			Color color = Color(255, 255, 255, 255*std::abs(depthBuf[i]));
+			Color color = Color(255, 255, 255, 255 * std::abs(depthBuf[i]));
 			frameBuf[i] = color.Data();
 		}
 	}
 
 }
-void setAfricanHeadModel(Model&model)
+
+void loadTexture(std::string& folderpath, std::string filename)
 {
-	model.setTexture(pf_AfricanHeadTexture);
-	model.setNormalTexture(pf_AfricanHeadNormalMap);
-	model.setSpecTexture(pf_AfricanHeadSpecTexture);
-	model.setTangentTextureName(pf_AfricanHeadTangentNormalTexture);
-	model.readObjFile(pf_AfricanHead);
-}
-void setCubeModel(Model& model)
-{
-	model.readObjFile(pf_cubeObj);
+	std::string filepath = folderpath + filename;
+	TextureManager::LoadTexture(filepath.c_str(), filename.c_str());
 }
 
-void setDiabloModel(Model& model)
+void loadModel(const char* foldername, std::string modelName, ObjModel& model)
 {
-	model.setTexture(pf_DiablTexture);
-	model.setNormalTexture(pf_DiabloNormalTexture);
-	model.setSpecTexture(pf_DiabloSpecTexture);
-	model.setTangentTextureName(pf_DiabloTangentNormalTexture);
-	model.readObjFile(pf_DiabloObj);
+	std::string folderpath = std::string(path_rootResourcePath) + foldername + "/";
+	std::string filepath = folderpath + modelName + ".obj";
+
+	model.readObjFile(filepath.c_str());
+
+	loadTexture(folderpath, modelName + suffix_DiffuseTex);
+	model.setTexture(modelName + suffix_DiffuseTex);
+
+	loadTexture(folderpath, modelName + suffix_NormalTex);
+	model.setNormalTexture(modelName + suffix_NormalTex);
+
+	loadTexture(folderpath, modelName + suffix_SpecTex);
+	model.setSpecTexture(modelName + suffix_SpecTex);
+
+	loadTexture(folderpath, modelName + suffix_TangentNormalTex);
+	model.setTangentTextureName(modelName + suffix_TangentNormalTex);
 }
+
 
 int main()
 {
@@ -321,6 +326,7 @@ int main()
 
 	initApp();
 	Render render;
+	//CommonVertexShader commonVs;
 	FlatShader flatShader;
 	TextureShader textureShader;
 	NormalMapShader normalMapShader;
@@ -329,53 +335,44 @@ int main()
 	TangentNormalShader tangentShader;
 	DepthShader depthShader;
 	ShadowShader shadowShader;
+	//VisualizedNormalShader vnShader;
 	float angle = 4;
-	std::vector<Model> models(1);
-	Camera camera(Vec3f(1,1,4), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
+	std::vector<ObjModel> models(1);
+	Camera camera(Vec3f(1, 1, 4), Vec3f(0, 0, 0), Vec3f(0, 1, 0));
 
-
-	TextureManager::LoadTexture(pf_AfricanHeadTexture);
-	TextureManager::LoadTexture(pf_AfricanHeadNormalMap);
-	TextureManager::LoadTexture(pf_AfricanHeadSpecTexture);
-	TextureManager::LoadTexture(pf_DiabloNormalTexture);
-	TextureManager::LoadTexture(pf_DiabloSpecTexture);
-	TextureManager::LoadTexture(pf_DiablTexture);
-	TextureManager::LoadTexture(pf_DiabloTangentNormalTexture);
-	TextureManager::LoadTexture(pf_AfricanHeadTangentNormalTexture);
-	
-	Vec4f pos = vec4f_SetPoint(camera.getPos());
+	Vec4f pos = vec4f_SetPoint(camera.get_CameraPos());
 	gl_Device.light_Dir = { -1,-1,-1 };
 	gl_Device.light_Dir.normalize();
-	gl_Device.viewPortMat = getViewPortMat(gl_Device.screen_width, gl_Device.screen_height);//视口矩阵
-	gl_Device.shader = &shadowShader;
+	gl_Device.viewPortMat = getViewPortMat(gl_Device.screen_width, gl_Device.screen_height);
+	gl_Device.shader = &depthShader;
 
 
-	setAfricanHeadModel(models[0]);
-	//setDiabloModel(models[0]);
-	//setCubeModel(models[0]);
-	
+	//loadModel(folder_AfricanHead, folder_AfricanHead, models[0]);
+	//loadModel(folder_helmet, folder_helmet,models[0]);
+	//loadModel(folder_drone, folder_drone,models[0]);
+	//loadModel(folder_floor, folder_floor,models[0]);
 
 	while (screen_exit == 0 && screen_keys[VK_ESCAPE] == 0) {
 
 		screen_dispatch();
 		clearBuffer(gl_Device);
-		
-		render.renderWithShader(camera, models);
-		//Model& model = models[0];
-		//model.rotation(0,angle,0);
+
+		//ObjModel& model = models[0];
+		//model.rotation(-90,angle,0);
 		//std::cout << angle << std::endl;
-		//pos = mat4x4_Mul_Vec4f(getRotationYMat(angleToRadians(angle)),pos);
-		//camera.setPos(pos);
+		//pos = mat4_Mul_Vec4f(getRotationXMat(angleToRadians(angle)),pos);
+		//camera.setPos(pos.x,pos.y,pos.z);
 		//gl_Device.light_Dir = pos;
 		//Mat4x4 rotation = getRotationYMat(angleToRadians(angle));
-		
-		//angle += 2;
+		//angle += 0.01f;
+
+		render.renderWithShader(camera, models);
 
 
 		screen_update();
 		Sleep(1);
 	}
-	renderToTgaFile(pf_OutputTexture,gl_Device);
+	renderToTgaFile(path_FrameBuffer, gl_Device);
 
 	destoryApp();
 

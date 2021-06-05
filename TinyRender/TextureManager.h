@@ -14,7 +14,7 @@ public:
 	static void initManager();
 	static void destoryManager();
 	static TGAImage* getTexture(const char* name);
-	static void LoadTexture(const char* filename);
+	static void LoadTexture(const char*,const char*);
 
 private:
 	TextureManager() {}
